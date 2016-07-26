@@ -15,6 +15,7 @@ public final class ShardBoundary implements Locatable, Serializable {
 
     private final SimpleInterval interval;
     private final SimpleInterval paddedInterval;
+    private final boolean usePaddedForLocatable;
 
     /**
      * Create a new ShardBoundary from the given intervals
@@ -23,17 +24,32 @@ public final class ShardBoundary implements Locatable, Serializable {
      * @param paddedInterval the interval covered by the shard's padding, must contain the shard interval
      */
     public ShardBoundary(final SimpleInterval interval, final SimpleInterval paddedInterval) {
+        this(interval, paddedInterval, false);
+    }
+
+    /**
+     * Create a new ShardBoundary from the given intervals
+     *
+     * @param interval the interval covered by the shard
+     * @param paddedInterval the interval covered by the shard's padding, must contain the shard interval
+     * @param usePaddedForLocatable whether to use the padded interval for the {@link Locatable} implementation of this {@link ShardBoundary}
+     */
+    public ShardBoundary(final SimpleInterval interval, final SimpleInterval paddedInterval, final boolean usePaddedForLocatable) {
         Utils.nonNull(interval);
         Utils.nonNull(paddedInterval);
         Utils.validateArg(paddedInterval.contains(interval), "interval must be contained within paddedInterval");
         this.interval = interval;
         this.paddedInterval = paddedInterval;
+        this.usePaddedForLocatable = usePaddedForLocatable;
     }
 
+    private Locatable getLocatable() {
+        return usePaddedForLocatable ? paddedInterval : interval;
+    }
 
     @Override
     public String getContig() {
-        return interval.getContig();
+        return getLocatable().getContig();
     }
 
     /**
@@ -41,7 +57,7 @@ public final class ShardBoundary implements Locatable, Serializable {
      */
     @Override
     public int getStart() {
-        return interval.getStart();
+        return getLocatable().getStart();
     }
 
     /**
@@ -49,7 +65,7 @@ public final class ShardBoundary implements Locatable, Serializable {
      */
     @Override
     public int getEnd() {
-        return interval.getEnd();
+        return getLocatable().getEnd();
     }
 
     /**
