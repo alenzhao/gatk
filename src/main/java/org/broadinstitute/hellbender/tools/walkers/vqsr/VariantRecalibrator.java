@@ -11,7 +11,11 @@ import htsjdk.variant.vcf.VCFHeader;
 import htsjdk.variant.vcf.VCFHeaderLine;
 import org.broadinstitute.hellbender.cmdline.*;
 import org.broadinstitute.hellbender.cmdline.programgroups.VariantProgramGroup;
-import org.broadinstitute.hellbender.engine.*;
+import org.broadinstitute.hellbender.engine.FeatureContext;
+import org.broadinstitute.hellbender.engine.FeatureInput;
+import org.broadinstitute.hellbender.engine.ReadsContext;
+import org.broadinstitute.hellbender.engine.ReferenceContext;
+import org.broadinstitute.hellbender.engine.MultiVariantWalker;
 import org.broadinstitute.hellbender.utils.R.RScriptExecutor;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.collections.ExpandingArrayList;
@@ -142,7 +146,7 @@ import java.util.*;
         oneLineSummary = "Build a recalibration model to score variant quality for filtering purposes",
         programGroup = VariantProgramGroup.class
 )
-public class VariantRecalibrator extends VariantWalker {
+public class VariantRecalibrator extends MultiVariantWalker {
 
     private static final String PLOT_TRANCHES_RSCRIPT = "plot_Tranches.R";
 
