@@ -16,6 +16,7 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -67,7 +68,7 @@ public final class StrandBiasBySample extends GenotypeAnnotation {
 
         //TODO: repalce the singleton map (Map<String, PerReadAlleleLikelihoodMap>) with s single-sample ReadLikelihoods<Allele>
         //TODO: where the sample name is g.getSampleName() with given likelihoods
-        final int[][] table = FisherStrand.getContingencyTable(Collections.singletonMap(g.getSampleName(), alleleLikelihoodMap), vc, 0);
+        final int[][] table = FisherStrand.getContingencyTable(likelihoods, vc, 0, Arrays.asList(g.getSampleName()));
 
         gb.attribute(GATKVCFConstants.STRAND_BIAS_BY_SAMPLE_KEY, getContingencyArray(table));
     }

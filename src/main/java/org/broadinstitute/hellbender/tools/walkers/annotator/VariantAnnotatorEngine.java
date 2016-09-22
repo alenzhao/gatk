@@ -161,7 +161,7 @@ public final class VariantAnnotatorEngine {
         final Map<String, Object> infoAnnotMap = new LinkedHashMap<>(newGenotypeAnnotatedVC.getAttributes());
         for ( final InfoFieldAnnotation annotationType : this.infoAnnotations) {
             if (addAnnot.test(annotationType)){
-                final Map<String, Object> annotationsFromCurrentType = annotationType.annotate(ref, newGenotypeAnnotatedVC, stratifiedPerReadAlleleLikelihoodMap);
+                final Map<String, Object> annotationsFromCurrentType = annotationType.annotate(ref, newGenotypeAnnotatedVC, likelihoods);
                 if ( annotationsFromCurrentType != null ) {
                     infoAnnotMap.putAll(annotationsFromCurrentType);
                 }
@@ -185,15 +185,10 @@ public final class VariantAnnotatorEngine {
 
         final GenotypesContext genotypes = GenotypesContext.create(vc.getNSamples());
         for ( final Genotype genotype : vc.getGenotypes() ) {
-            PerReadAlleleLikelihoodMap perReadAlleleLikelihoodMap = null;
-            if (likelihoods != null) {
-                perReadAlleleLikelihoodMap = likelihoods.get(genotype.getSampleName());
-            }
-
             final GenotypeBuilder gb = new GenotypeBuilder(genotype);
             for ( final GenotypeAnnotation annotation : genotypeAnnotations) {
                 if (addAnnot.test(annotation)) {
-                    annotation.annotate(ref, vc, genotype, gb, perReadAlleleLikelihoodMap);
+                    annotation.annotate(ref, vc, genotype, gb, likelihoods);
                 }
             }
             genotypes.add(gb.make());

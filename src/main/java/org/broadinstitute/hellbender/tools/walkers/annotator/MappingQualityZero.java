@@ -14,6 +14,7 @@ import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 
 /**
@@ -41,7 +42,11 @@ public final class MappingQualityZero extends InfoFieldAnnotation {
             return Collections.emptyMap();
         }
         //NOTE: unlike other annotations, this one returns 0 if stratifiedPerReadAlleleLikelihoodMap is empty
-        final long mq0 = likelihoods.values().stream().flatMap(llm -> llm.getLikelihoodReadMap().keySet().stream()).filter(r -> r.getMappingQuality() == 0).count();
+        final long mq0 = IntStream.range(0, likelihoods.numberOfSamples()).boxed()
+                .flatMap(s -> likelihoods.sampleReads(s).stream())
+                .filter(r -> r.getMappingQuality() == 0)
+                .count();
+
         return Collections.singletonMap(getKeyNames().get(0), formattedValue(mq0));
     }
 

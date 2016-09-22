@@ -993,15 +993,38 @@ public final class ReadLikelihoods<A extends Allele> implements SampleList, Alle
      * @return never {@code null}, one element per read in the read-likelihoods collection.
      */
     public Collection<BestAllele> bestAlleles() {
-        final List<BestAllele> result = new ArrayList<>(100); // blind estimate.
-        final int sampleCount = samples.numberOfSamples();
-        for (int s = 0; s < sampleCount; s++) {
-            final GATKRead[] sampleReads = readsBySampleIndex[s];
-            final int readCount = sampleReads.length;
-            for (int r = 0; r < readCount; r++) {
-                result.add(searchBestAllele(s, r, true));
-            }
+        return IntStream.range(0, numberOfSamples()).boxed().flatMap(n -> bestAlleles(n).stream()).collect(Collectors.toList());
+    }
+
+    /**
+     * Returns the collection of best allele estimates for one sample's reads based on the read-likelihoods.
+     *
+     * @throws IllegalStateException if there is no alleles.
+     *
+     * @return never {@code null}, one element per read in the read-likelihoods collection.
+     */
+    public Collection<BestAllele> bestAlleles(final String sample) {
+        final int sampleIndex = indexOfSample(sample);
+        return bestAlleles(sampleIndex);
+    }
+
+    /**
+     * Returns the collection of best allele estimates for one sample's reads reads based on the read-likelihoods.
+     *
+     * @throws IllegalStateException if there is no alleles.
+     *
+     * @return never {@code null}, one element per read in the read-likelihoods collection.
+     */
+    private Collection<BestAllele> bestAlleles(final int sampleIndex) {
+        Utils.validIndex(sampleIndex, numberOfSamples());
+
+        final GATKRead[] sampleReads = readsBySampleIndex[sampleIndex];
+        final int readCount = sampleReads.length;
+        final List<BestAllele> result = new ArrayList<>(readCount);
+        for (int r = 0; r < readCount; r++) {
+            result.add(searchBestAllele(sampleIndex, r, true));
         }
+
         return result;
     }
 

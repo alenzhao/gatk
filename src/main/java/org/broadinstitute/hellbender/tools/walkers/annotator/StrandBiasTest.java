@@ -14,6 +14,7 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Class of tests to detect strand bias.
@@ -106,23 +107,35 @@ public abstract class StrandBiasTest extends InfoFieldAnnotation {
     public static int[][] getContingencyTable( final ReadLikelihoods<Allele> likelihoods,
                                                final VariantContext vc,
                                                final int minCount) {
+        return getContingencyTable(likelihoods, vc, minCount, likelihoods.samples());
+    }
+
+    /**
+     Allocate and fill a 2x2 strand contingency table.  In the end, it'll look something like this:
+     *             fw      rc
+     *   allele1   #       #
+     *   allele2   #       #
+     * @return a 2x2 contingency table
+     */
+    public static int[][] getContingencyTable( final ReadLikelihoods<Allele> likelihoods,
+                                               final VariantContext vc,
+                                               final int minCount,
+                                               final Collection<String> samples) {
         if( likelihoods == null || vc == null) {
             return null;
         }
 
         final Allele ref = vc.getReference();
         final List<Allele> allAlts = vc.getAlternateAlleles();
-        final int[][] table = new int[ARRAY_DIM][ARRAY_DIM];
 
-        for (final PerReadAlleleLikelihoodMap maps : stratifiedPerReadAlleleLikelihoodMap.values() ) {
-            final int[] myTable = new int[ARRAY_SIZE];
-            for (final Map.Entry<GATKRead,Map<Allele,Double>> el : maps.getLikelihoodReadMap().entrySet()) {
-                final MostLikelyAllele mostLikelyAllele = PerReadAlleleLikelihoodMap.getMostLikelyAllele(el.getValue());
-                final GATKRead read = el.getKey();
-                updateTable(myTable, mostLikelyAllele.getAlleleIfInformative(), read, ref, allAlts);
-            }
-            if ( passesMinimumThreshold(myTable, minCount) ) {
-                copyToMainTable(myTable, table);
+        final int[][] table = new int[ARRAY_DIM][ARRAY_DIM];
+        for (final String sample : samples) {
+            final int[] sampleTable = new int[ARRAY_SIZE];
+            likelihoods.bestAlleles(sample).stream()
+                    .filter(ba -> ba.isInformative())
+                    .forEach(ba -> updateTable(sampleTable, ba.allele, ba.read, ref, allAlts));
+            if (passesMinimumThreshold(sampleTable, minCount)) {
+                copyToMainTable(sampleTable, table);
             }
         }
 

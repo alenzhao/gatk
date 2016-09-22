@@ -90,10 +90,10 @@ public final class AS_RMSMappingQuality extends InfoFieldAnnotation implements A
         //When we go to reduce, we'll use the AD info to get the number of reads
 
         //must use perReadAlleleLikelihoodMap for allele-specific annotations
-        if (likelihoods == null || likelihoods.isEmpty()) {
+        if (likelihoods == null) {
             return;
         }
-        getRMSDataFromPRALM(likelihoods, myData);
+        getRMSDataFromLikelihoods(likelihoods, myData);
     }
 
     @Override
@@ -102,22 +102,13 @@ public final class AS_RMSMappingQuality extends InfoFieldAnnotation implements A
     @Override
     public String getRawKeyName() { return GATKVCFConstants.AS_RAW_RMS_MAPPING_QUALITY_KEY; }
 
-    private void getRMSDataFromPRALM(final ReadLikelihoods<Allele> likelihoods, ReducibleAnnotationData<Number> myData) {
-       //over all the samples in the Map...
-        for ( final PerReadAlleleLikelihoodMap perReadLikelihoods : perReadAlleleLikelihoodMap.values() ) {
-            //for each read...
-            for ( final Map.Entry<GATKRead, Map<Allele,Double>> readLikelihoods : perReadLikelihoods.getLikelihoodReadMap().entrySet() ) {
-                final int mq = readLikelihoods.getKey().getMappingQuality();
+    private void getRMSDataFromLikelihoods(final ReadLikelihoods<Allele> likelihoods, ReducibleAnnotationData<Number> myData) {
+        for ( final ReadLikelihoods<Allele>.BestAllele bestAllele : likelihoods.bestAlleles() ) {
+            if (bestAllele.isInformative()) {
+                final int mq = bestAllele.read.getMappingQuality();
                 if ( mq != QualityUtils.MAPPING_QUALITY_UNAVAILABLE ) {
-                    if (!PerReadAlleleLikelihoodMap.getMostLikelyAllele(readLikelihoods.getValue()).isInformative()) {
-                        continue;
-                    }
-                    final Allele bestAllele = PerReadAlleleLikelihoodMap.getMostLikelyAllele(readLikelihoods.getValue()).getMostLikelyAllele();
-                    double currSquareSum = 0;
-                    if (myData.hasAttribute(bestAllele)) {
-                        currSquareSum += (double) myData.getAttribute(bestAllele);
-                    }
-                    myData.putAttribute(bestAllele, currSquareSum + mq * mq);
+                    final double currSquareSum = myData.hasAttribute(bestAllele.allele) ? (double) myData.getAttribute(bestAllele.allele) : 0;
+                    myData.putAttribute(bestAllele.allele, currSquareSum + mq * mq);
                 }
             }
         }

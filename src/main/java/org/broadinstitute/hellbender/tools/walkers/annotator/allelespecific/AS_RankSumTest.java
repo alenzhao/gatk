@@ -90,33 +90,14 @@ public abstract class AS_RankSumTest extends RankSumTest implements ReducibleAnn
             return;
         }
 
+        final int refLoc = vc.getStart();
+
         final Map<Allele, CompressedDataList<Integer>> perAlleleValues = myData.getAttributeMap();
-        for ( final PerReadAlleleLikelihoodMap likelihoodMap : stratifiedPerReadAlleleLikelihoodMap.values() ) {
-            if ( likelihoodMap != null && !likelihoodMap.isEmpty() ) {
-                fillQualsFromLikelihoodMap(vc.getAlleles(), vc.getStart(), likelihoodMap, perAlleleValues);
-            }
-        }
-    }
-
-    private void fillQualsFromLikelihoodMap(final List<Allele> alleles,
-                                            final int refLoc,
-                                            final LikelihoodMatrix<Allele> likelihoodMatrix,
-                                            final Map<Allele, CompressedDataList<Integer>> perAlleleValues) {
-        for ( final Map.Entry<GATKRead, Map<Allele,Double>> el : likelihoodMap.getLikelihoodReadMap().entrySet() ) {
-            final MostLikelyAllele a = PerReadAlleleLikelihoodMap.getMostLikelyAllele(el.getValue());
-            if ( ! a.isInformative() ) {
-                continue; // read is non-informative
-            }
-
-            final GATKRead read = el.getKey();
-            if ( isUsableRead(read, refLoc) ) {
-                final OptionalDouble value = getElementForRead(read, refLoc, a);
-                if (! value.isPresent() || value.getAsDouble() == INVALID_ELEMENT_FROM_READ ) {
-                    continue;
-                }
-
-                if(perAlleleValues.containsKey(a.getMostLikelyAllele())) {
-                    perAlleleValues.get(a.getMostLikelyAllele()).add((int)value.getAsDouble());
+        for ( final ReadLikelihoods<Allele>.BestAllele bestAllele : likelihoods.bestAlleles() ) {
+            if (bestAllele.isInformative() && isUsableRead(bestAllele.read, refLoc)) {
+                final OptionalDouble value = getElementForRead(bestAllele.read, refLoc, bestAllele);
+                if (value.isPresent() && value.getAsDouble() != INVALID_ELEMENT_FROM_READ && perAlleleValues.containsKey(bestAllele.allele)) {
+                    perAlleleValues.get(bestAllele.allele).add((int) value.getAsDouble());
                 }
             }
         }

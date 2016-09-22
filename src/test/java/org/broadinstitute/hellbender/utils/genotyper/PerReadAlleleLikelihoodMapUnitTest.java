@@ -57,11 +57,6 @@ public final class PerReadAlleleLikelihoodMapUnitTest extends BaseTest {
 
         Assert.assertEquals(perReadAlleleLikelihoodMap.getAllelesSet(), new LinkedHashSet<>(allAlleles));
         Assert.assertEquals(perReadAlleleLikelihoodMap.size(), pileup.size());
-        Assert.assertEquals(perReadAlleleLikelihoodMap.getAlleleStratifiedReadMap().keySet().size(), 3);
-        Map<Allele,List<GATKRead>> shouldBeAllA = perReadAlleleLikelihoodMap.getAlleleStratifiedReadMap();
-        Assert.assertEquals(shouldBeAllA.get(base_A).size(), pileup.size());
-        Assert.assertEquals(shouldBeAllA.get(base_C).size(), 0);
-        Assert.assertEquals(shouldBeAllA.get(base_T).size(), 0);
 
         final Map<GATKRead, Map<Allele, Double>> readMap = perReadAlleleLikelihoodMap.getLikelihoodReadMap();
         Assert.assertEquals(readMap.size(), pileup.size());
@@ -120,11 +115,6 @@ public final class PerReadAlleleLikelihoodMapUnitTest extends BaseTest {
 
         Assert.assertEquals(perReadAlleleLikelihoodMap.getAllelesSet(), new LinkedHashSet<>(allAlleles));
         Assert.assertEquals(perReadAlleleLikelihoodMap.size(), pileup.size());
-        Assert.assertEquals(perReadAlleleLikelihoodMap.getAlleleStratifiedReadMap().keySet().size(), 3);
-        Map<Allele,List<GATKRead>> shouldBeAllA = perReadAlleleLikelihoodMap.getAlleleStratifiedReadMap();
-        Assert.assertEquals(shouldBeAllA.get(base_A).size(), pileup.size());
-        Assert.assertEquals(shouldBeAllA.get(base_C).size(), 0);
-        Assert.assertEquals(shouldBeAllA.get(base_T).size(), 0);
 
         //getLikelihoodReadMap
         final Map<GATKRead, Map<Allele, Double>> likelihoodReadMap = perReadAlleleLikelihoodMap.getLikelihoodReadMap();
@@ -135,29 +125,11 @@ public final class PerReadAlleleLikelihoodMapUnitTest extends BaseTest {
         final Set<Allele> allelesSet = perReadAlleleLikelihoodMap.getAllelesSet();
         Assert.assertEquals(allelesSet, new LinkedHashSet<>(Arrays.asList(base_A, base_C, base_T)));
 
-        final int oldSize = perReadAlleleLikelihoodMap.size();
-        perReadAlleleLikelihoodMap.performPerAlleleDownsampling(-0.5); //no-op
-        final int newSize = perReadAlleleLikelihoodMap.size();
-        Assert.assertEquals(oldSize, newSize);
-
-        final MostLikelyAllele mla = PerReadAlleleLikelihoodMap.getMostLikelyAllele(Collections.emptyMap());
-        Assert.assertTrue(mla.getMostLikelyAllele().isNoCall());
-        Assert.assertNull(mla.getSecondMostLikelyAllele());
-        Assert.assertEquals(mla.getLog10LikelihoodOfMostLikely(), Double.NEGATIVE_INFINITY);
-        Assert.assertEquals(mla.getLog10LikelihoodOfSecondBest(), Double.NEGATIVE_INFINITY);
-
-        final MostLikelyAllele mla2 = PerReadAlleleLikelihoodMap.getMostLikelyAllele(Collections.singletonMap(base_A, -0.04));
-        Assert.assertFalse(mla2.getMostLikelyAllele().isNoCall());
-        Assert.assertNull(mla2.getSecondMostLikelyAllele());
-        Assert.assertEquals(mla2.getLog10LikelihoodOfMostLikely(), -0.04);
-        Assert.assertEquals(mla2.getLog10LikelihoodOfSecondBest(), Double.NEGATIVE_INFINITY);
-
         //clear makes it empty
         perReadAlleleLikelihoodMap.clear();
         Assert.assertTrue(perReadAlleleLikelihoodMap.isEmpty());
         Assert.assertNull(perReadAlleleLikelihoodMap.getMostLikelyDiploidAlleles());
         Assert.assertEquals(perReadAlleleLikelihoodMap.size(), 0);
-        Assert.assertEquals(perReadAlleleLikelihoodMap.getAlleleStratifiedReadMap().keySet().size(), 0);
 
         final PileupElement pu = pileup.iterator().next();
         final Map<Allele, Double> ll1 = perReadAlleleLikelihoodMap.getLikelihoodsAssociatedWithPileupElement(pu);
@@ -276,11 +248,6 @@ public final class PerReadAlleleLikelihoodMapUnitTest extends BaseTest {
         }
 
         Assert.assertEquals(perReadAlleleLikelihoodMap.size(), pileup.size());
-        Assert.assertEquals(perReadAlleleLikelihoodMap.getAlleleStratifiedReadMap().keySet().size(), 3);
-        Map<Allele,List<GATKRead>> halfAhalfC = perReadAlleleLikelihoodMap.getAlleleStratifiedReadMap();
-        Assert.assertEquals(halfAhalfC.get(base_A).size(), pileup.size() / 2);
-        Assert.assertEquals(halfAhalfC.get(base_C).size(), pileup.size() / 2);
-        Assert.assertEquals(halfAhalfC.get(base_T).size(), 0);
 
         // make sure the likelihoods are retrievable
 
@@ -301,7 +268,6 @@ public final class PerReadAlleleLikelihoodMapUnitTest extends BaseTest {
 
         // and test downsampling for good measure
 
-        final List<GATKRead> excessReads = new LinkedList<>();
         int prevSize = perReadAlleleLikelihoodMap.size();
         for ( int i = 0; i < 10 ; i++ ) {
             final GATKRead read = ArtificialReadUtils.createArtificialRead(header, "myExcessRead" + i, 0, 1, readLength);
@@ -319,17 +285,6 @@ public final class PerReadAlleleLikelihoodMapUnitTest extends BaseTest {
         }
 
         Assert.assertEquals(perReadAlleleLikelihoodMap.size(), pileup.size() + 10);
-        Assert.assertEquals(perReadAlleleLikelihoodMap.getAlleleStratifiedReadMap().get(base_A).size(), 60);
-        perReadAlleleLikelihoodMap.performPerAlleleDownsampling(0.1);
-        Assert.assertEquals(perReadAlleleLikelihoodMap.size(), (int) (0.9 * (pileup.size() + 10)));
-
-        Map<Allele,List<GATKRead>> downsampledStrat = perReadAlleleLikelihoodMap.getAlleleStratifiedReadMap();
-        Assert.assertEquals(downsampledStrat.get(base_A).size(), (pileup.size() / 2) - 1);
-        Assert.assertEquals(downsampledStrat.get(base_C).size(), (pileup.size() / 2));
-        Assert.assertEquals(downsampledStrat.get(base_T).size(), 0);
-
-        perReadAlleleLikelihoodMap.performPerAlleleDownsampling(1.2);   //effectively clear
-        Assert.assertTrue(perReadAlleleLikelihoodMap.isEmpty());
     }
 
     @DataProvider(name = "PoorlyModelledReadData")

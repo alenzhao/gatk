@@ -106,7 +106,7 @@ public final class LikelihoodRankSumTestUnitTest extends BaseTest {
         final LikelihoodRankSumTest ann = new LikelihoodRankSumTest();
         final String contig = "1";
         final GATKRead read1 = makeRead(contig, 1,  30, "read1");
-        ann.getElementForRead(read1, read1.getStart(), MostLikelyAllele.NO_CALL);
+        ann.getElementForRead(read1, read1.getStart(), new ReadLikelihoods<Allele>.BestAllele());
     }
 
 }

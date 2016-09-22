@@ -18,6 +18,7 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 
 import java.util.*;
+import java.util.stream.IntStream;
 
 
 /**
@@ -47,7 +48,7 @@ public final class RMSMappingQuality extends InfoFieldAnnotation implements Stan
                                                final VariantContext vc,
                                                final ReadLikelihoods<Allele> likelihoods){
         Utils.nonNull(vc);
-        if (likelihoods == null || likelihoods.isEmpty() ) {
+        if (likelihoods == null ) {
             return Collections.emptyMap();
         }
 
@@ -63,15 +64,13 @@ public final class RMSMappingQuality extends InfoFieldAnnotation implements Stan
     public void calculateRawData(final VariantContext vc,
                                  final ReadLikelihoods<Allele> likelihoods,
                                  final ReducibleAnnotationData rawAnnotations){
-        if (likelihoods.isEmpty()) {
-            return;
-        }
-
         //put this as a double, like GATK3.5
-        final double squareSum = likelihoods.values().stream()
-                .flatMap(likelihoodMap -> likelihoodMap.getReads().stream())
+        final double squareSum = IntStream.range(0, likelihoods.numberOfSamples()).boxed()
+                .flatMap(s -> likelihoods.sampleReads(s).stream())
                 .map(GATKRead::getMappingQuality)
-                .filter(mq -> mq != QualityUtils.MAPPING_QUALITY_UNAVAILABLE).mapToDouble(mq -> mq * mq).sum();
+                .filter(mq -> mq != QualityUtils.MAPPING_QUALITY_UNAVAILABLE)
+                .mapToDouble(mq -> mq * mq).sum();
+
         rawAnnotations.putAttribute(Allele.NO_CALL, squareSum);
     }
 

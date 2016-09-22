@@ -59,18 +59,12 @@ public final class BaseQualitySumPerAlleleBySample extends GenotypeAnnotation im
         double refQualSum= 0.0;
         double altQualSum= 0.0;
 
-        for ( final Map.Entry<GATKRead, Map<Allele,Double>> el : alleleLikelihoodMap.getLikelihoodReadMap().entrySet() ) {
-            final MostLikelyAllele a = PerReadAlleleLikelihoodMap.getMostLikelyAllele(el.getValue());
-            if ( ! a.isInformative() ) {
-                continue; // read is non-informative
-            }
-
-            final GATKRead read = el.getKey();
-            if ( isUsableRead(read) ) {
-                final double baseQual = getBaseQualityForRead(read, vc.getStart());
-                if ( a.getMostLikelyAllele().isReference() ) {
+        for ( final ReadLikelihoods<Allele>.BestAllele bestAllele : likelihoods.bestAlleles(g.getSampleName()) ) {
+            if ( bestAllele.isInformative() && isUsableRead(bestAllele.read)) {
+                final double baseQual = getBaseQualityForRead(bestAllele.read, vc.getStart());
+                if (bestAllele.allele.isReference()) {
                     refQualSum += baseQual;
-                } else if ( vc.getAlleles().contains(a.getMostLikelyAllele()) ) {
+                } else if (vc.getAlleles().contains(bestAllele.allele)) {
                     altQualSum += baseQual;
                 }
             }

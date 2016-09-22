@@ -83,10 +83,7 @@ public final class QualByDepth extends InfoFieldAnnotation implements StandardAn
                 }
                 depth += totalADdepth;
             } else if (likelihoods != null) {
-                final PerReadAlleleLikelihoodMap perReadAlleleLikelihoods = perReadAlleleLikelihoodMap.get(genotype.getSampleName());
-                if (perReadAlleleLikelihoods != null && !perReadAlleleLikelihoods.isEmpty()) {
-                    depth += perReadAlleleLikelihoods.size();
-                }
+                depth += likelihoods.sampleReadCount(likelihoods.indexOfSample(genotype.getSampleName()));
             } else if ( genotype.hasDP() ) {
                 depth += genotype.getDP();
             }

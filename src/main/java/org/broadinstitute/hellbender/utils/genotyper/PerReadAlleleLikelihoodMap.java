@@ -65,27 +65,6 @@ public final class PerReadAlleleLikelihoodMap {
         likelihoodReadMap.computeIfAbsent(read, r -> new LinkedHashMap<>()).put(a,likelihood);
     }
 
-    /**
-     * Convert the @likelihoodReadMap to a map of alleles to reads, where each read is mapped uniquely to the allele
-     * for which it has the greatest associated likelihood
-     * @return a map from each allele to a list of reads that 'support' the allele
-     */
-    @VisibleForTesting
-    Map<Allele,List<GATKRead>> getAlleleStratifiedReadMap() {
-        final Map<Allele, List<GATKRead>> alleleReadMap = alleles.stream().collect(
-                Collectors.toMap(Function.identity(),
-                                 allele -> new ArrayList<>()));
-
-        for ( final Map.Entry<GATKRead, Map<Allele, Double>> entry : likelihoodReadMap.entrySet() ) {
-            final MostLikelyAllele bestAllele = getMostLikelyAllele(entry.getValue());
-            if ( bestAllele.isInformative() ) {
-                alleleReadMap.get(bestAllele.getMostLikelyAllele()).add(entry.getKey());
-            }
-        }
-
-        return alleleReadMap;
-    }
-
     public int size() {
         return likelihoodReadMap.size();
     }
@@ -221,16 +200,6 @@ public final class PerReadAlleleLikelihoodMap {
      * Given a map from alleles to likelihoods, find the allele with the largest likelihood.
      *
      * @param alleleMap - a map from alleles to likelihoods
-     * @return - a MostLikelyAllele object
-     */
-    public static MostLikelyAllele getMostLikelyAllele( final Map<Allele,Double> alleleMap ) {
-        return getMostLikelyAllele(alleleMap, null);
-    }
-
-    /**
-     * Given a map from alleles to likelihoods, find the allele with the largest likelihood.
-     *
-     * @param alleleMap - a map from alleles to likelihoods
      * @param onlyConsiderTheseAlleles if not null, we will only consider alleles in this set for being one of the best.
      *                                 this is useful for the case where you've selected a subset of the alleles that
      *                                 the reads have been computed for further analysis.  If null totally ignored
@@ -338,31 +307,6 @@ public final class PerReadAlleleLikelihoodMap {
      */
     public Set<Allele> getAllelesSet() {
         return Collections.unmodifiableSet(allelesSet);
-    }
-
-    /**
-     * For each allele "a" , identify those reads whose most likely allele is "a", and remove a "downsamplingFraction" proportion
-     * of those reads from the "likelihoodReadMap". This is used for e.g. sample contamination
-     * @param downsamplingFraction - the fraction of supporting reads to remove from each allele. If <=0 all reads kept, if >=1 all reads tossed.
-     */
-    public void performPerAlleleDownsampling(final double downsamplingFraction) {
-        if ( downsamplingFraction <= 0.0 ) { //remove no reads
-            return;
-        }
-        if ( downsamplingFraction >= 1.0 ) { //remove all reads
-            likelihoodReadMap.clear();
-            return;
-        }
-
-        // stratifying the reads by the alleles they represent at this position
-        final Map<Allele, List<GATKRead>> alleleReadMap = getAlleleStratifiedReadMap();
-
-        // compute the reads to remove and actually remove them
-        final int totalReads= AlleleBiasedDownsamplingUtils.totalReads(alleleReadMap);
-        final List<GATKRead> readsToRemove = AlleleBiasedDownsamplingUtils.selectAlleleBiasedReads(alleleReadMap, totalReads, downsamplingFraction);
-        for ( final GATKRead read : readsToRemove ) {
-            likelihoodReadMap.remove(read);
-        }
     }
 
     /**

@@ -64,7 +64,7 @@ public final class OxoGReadCounts extends GenotypeAnnotation {
                                   final VariantContext vc,
                                   final Genotype g,
                                   final GenotypeBuilder gb,
-                         final ReadLikelihoods<Allele> likelihoods){
+                                  final ReadLikelihoods<Allele> likelihoods){
         Utils.nonNull(gb, "gb is null");
         Utils.nonNull(vc, "vc is null");
 
@@ -80,18 +80,17 @@ public final class OxoGReadCounts extends GenotypeAnnotation {
         int ref_F1R2 = 0;
         int ref_F2R1 = 0;
 
-        for ( final Map.Entry<GATKRead, Map<Allele,Double>> el : likelihoods.getLikelihoodReadMap().entrySet() ) {
-            final MostLikelyAllele a = PerReadAlleleLikelihoodMap.getMostLikelyAllele(el.getValue());
-            final GATKRead read = el.getKey();
-
-            if ( a.isInformative() && isUsableRead(read)) {
-                if (a.getAlleleIfInformative().equals(ref, true) && read.isPaired()) {
+        for (final ReadLikelihoods<Allele>.BestAllele bestAllele : likelihoods.bestAlleles(g.getSampleName())) {
+            final GATKRead read = bestAllele.read;
+            if (bestAllele.isInformative() && isUsableRead(read) && read.isPaired()) {
+                final Allele allele = bestAllele.allele;
+                if (allele.equals(ref, true)) {
                     if (read.isReverseStrand() == read.isFirstOfPair()) {
                         ref_F2R1++;
                     } else {
                         ref_F1R2++;
                     }
-                } else if (a.getAlleleIfInformative().equals(alt, true) && read.isPaired()) {
+                } else if (allele.equals(alt, true)) {
                     if (read.isReverseStrand() == read.isFirstOfPair()) {
                         alt_F2R1++;
                     } else {
