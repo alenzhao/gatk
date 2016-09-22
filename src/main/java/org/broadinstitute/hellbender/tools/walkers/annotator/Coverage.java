@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
+import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFConstants;
 import htsjdk.variant.vcf.VCFInfoHeaderLine;
@@ -7,6 +8,7 @@ import htsjdk.variant.vcf.VCFStandardHeaderLines;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 
 import java.util.Collections;
 import java.util.List;
@@ -34,13 +36,13 @@ public final class Coverage extends InfoFieldAnnotation implements StandardAnnot
 
     public Map<String, Object> annotate(final ReferenceContext ref,
                                         final VariantContext vc,
-                                        final Map<String, PerReadAlleleLikelihoodMap> perReadAlleleLikelihoodMap) {
+                                        final ReadLikelihoods<Allele> likelihoods) {
         Utils.nonNull(vc);
-        if (perReadAlleleLikelihoodMap == null || perReadAlleleLikelihoodMap.isEmpty()) {
+        if (likelihoods == null || likelihoods.isEmpty()) {
             return Collections.emptyMap();
         }
 
-        final int depth = perReadAlleleLikelihoodMap.values().stream().mapToInt(maps -> maps.getLikelihoodReadMap().size()).sum();
+        final int depth = likelihoods.values().stream().mapToInt(maps -> maps.getLikelihoodReadMap().size()).sum();
         return Collections.singletonMap(getKeyNames().get(0), String.format("%d", depth));
     }
 

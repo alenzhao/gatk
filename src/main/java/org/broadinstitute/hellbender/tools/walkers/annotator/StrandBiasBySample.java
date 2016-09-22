@@ -1,6 +1,7 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
 import com.google.common.annotations.VisibleForTesting;
+import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.GenotypeBuilder;
 import htsjdk.variant.variantcontext.VariantContext;
@@ -10,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 
@@ -53,16 +55,18 @@ public final class StrandBiasBySample extends GenotypeAnnotation {
                          final VariantContext vc,
                          final Genotype g,
                          final GenotypeBuilder gb,
-                         final PerReadAlleleLikelihoodMap alleleLikelihoodMap) {
+                         final ReadLikelihoods<Allele> likelihoods) {
         Utils.nonNull(vc);
         Utils.nonNull(g);
         Utils.nonNull(gb);
 
-        if ( alleleLikelihoodMap == null || !g.isCalled() ) {
+        if ( likelihoods == null || !g.isCalled() ) {
             logger.warn("Annotation will not be calculated, genotype is not called or alleleLikelihoodMap is null");
             return;
         }
 
+        //TODO: repalce the singleton map (Map<String, PerReadAlleleLikelihoodMap>) with s single-sample ReadLikelihoods<Allele>
+        //TODO: where the sample name is g.getSampleName() with given likelihoods
         final int[][] table = FisherStrand.getContingencyTable(Collections.singletonMap(g.getSampleName(), alleleLikelihoodMap), vc, 0);
 
         gb.attribute(GATKVCFConstants.STRAND_BIAS_BY_SAMPLE_KEY, getContingencyArray(table));

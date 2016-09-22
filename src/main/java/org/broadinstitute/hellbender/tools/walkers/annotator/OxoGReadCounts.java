@@ -10,6 +10,7 @@ import org.broadinstitute.hellbender.utils.QualityUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.MostLikelyAllele;
 import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
@@ -63,11 +64,11 @@ public final class OxoGReadCounts extends GenotypeAnnotation {
                                   final VariantContext vc,
                                   final Genotype g,
                                   final GenotypeBuilder gb,
-                                  final PerReadAlleleLikelihoodMap alleleLikelihoodMap){
+                         final ReadLikelihoods<Allele> likelihoods){
         Utils.nonNull(gb, "gb is null");
         Utils.nonNull(vc, "vc is null");
 
-        if (g == null || !g.isCalled() || alleleLikelihoodMap == null || !vc.isSNP()) {
+        if (g == null || !g.isCalled() || likelihoods == null || !vc.isSNP()) {
             return;
         }
 
@@ -79,7 +80,7 @@ public final class OxoGReadCounts extends GenotypeAnnotation {
         int ref_F1R2 = 0;
         int ref_F2R1 = 0;
 
-        for ( final Map.Entry<GATKRead, Map<Allele,Double>> el : alleleLikelihoodMap.getLikelihoodReadMap().entrySet() ) {
+        for ( final Map.Entry<GATKRead, Map<Allele,Double>> el : likelihoods.getLikelihoodReadMap().entrySet() ) {
             final MostLikelyAllele a = PerReadAlleleLikelihoodMap.getMostLikelyAllele(el.getValue());
             final GATKRead read = el.getKey();
 

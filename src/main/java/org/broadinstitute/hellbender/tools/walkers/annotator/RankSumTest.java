@@ -8,8 +8,10 @@ import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.MannWhitneyU;
 import org.broadinstitute.hellbender.utils.QualityUtils;
 import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.utils.genotyper.LikelihoodMatrix;
 import org.broadinstitute.hellbender.utils.genotyper.MostLikelyAllele;
 import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 import java.util.*;
@@ -32,9 +34,9 @@ public abstract class RankSumTest extends InfoFieldAnnotation {
 
     public Map<String, Object> annotate(final ReferenceContext ref,
                                         final VariantContext vc,
-                                        final Map<String, PerReadAlleleLikelihoodMap> stratifiedPerReadAlleleLikelihoodMap) {
+                                        final ReadLikelihoods<Allele> likelihoods) {
         Utils.nonNull(vc, "vc is null");
-        Utils.nonNull(stratifiedPerReadAlleleLikelihoodMap, "stratifiedPerReadAlleleLikelihoodMap has to be non-null");
+        Utils.nonNull(likelihoods, "likelihoods has to be non-null");
         final GenotypesContext genotypes = vc.getGenotypes();
         if (genotypes == null || genotypes.isEmpty()) {
             return Collections.emptyMap();
@@ -65,7 +67,7 @@ public abstract class RankSumTest extends InfoFieldAnnotation {
 
     private void fillQualsFromLikelihoodMap(final List<Allele> alleles,
                                             final int refLoc,
-                                            final PerReadAlleleLikelihoodMap likelihoodMap,
+                                            final LikelihoodMatrix<Allele> likelihoodMatrix,
                                             final List<Double> refQuals,
                                             final List<Double> altQuals) {
         for ( final Map.Entry<GATKRead, Map<Allele,Double>> el : likelihoodMap.getLikelihoodReadMap().entrySet() ) {

@@ -9,6 +9,7 @@ import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.MostLikelyAllele;
 import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 
@@ -26,7 +27,7 @@ public abstract class StrandBiasTest extends InfoFieldAnnotation {
     //template method for calculating strand bias annotations using the three different methods
     public Map<String, Object> annotate(final ReferenceContext ref,
                                         final VariantContext vc,
-                                        final Map<String, PerReadAlleleLikelihoodMap> stratifiedPerReadAlleleLikelihoodMap) {
+                                        final ReadLikelihoods<Allele> likelihoods) {
         Utils.nonNull(vc);
         if ( !vc.isVariant() ) {
             return Collections.emptyMap();
@@ -41,16 +42,16 @@ public abstract class StrandBiasTest extends InfoFieldAnnotation {
             }
         }
 
-        if (stratifiedPerReadAlleleLikelihoodMap != null) {
-            return calculateAnnotationFromLikelihoodMap(stratifiedPerReadAlleleLikelihoodMap, vc);
+        if (likelihoods != null) {
+            return calculateAnnotationFromLikelihoods(likelihoods, vc);
         }
         return Collections.emptyMap();
     }
 
     protected abstract Map<String, Object> calculateAnnotationFromGTfield(final GenotypesContext genotypes);
 
-    protected abstract Map<String, Object> calculateAnnotationFromLikelihoodMap(final Map<String, PerReadAlleleLikelihoodMap> stratifiedPerReadAlleleLikelihoodMap,
-                                                                                final VariantContext vc);
+    protected abstract Map<String, Object> calculateAnnotationFromLikelihoods(final ReadLikelihoods<Allele> likelihoods,
+                                                                              final VariantContext vc);
 
     /**
      * Create the contingency table by retrieving the per-sample strand bias annotation and adding them together
@@ -102,10 +103,10 @@ public abstract class StrandBiasTest extends InfoFieldAnnotation {
      *   allele2   #       #
      * @return a 2x2 contingency table
      */
-    public static int[][] getContingencyTable( final Map<String, PerReadAlleleLikelihoodMap> stratifiedPerReadAlleleLikelihoodMap,
+    public static int[][] getContingencyTable( final ReadLikelihoods<Allele> likelihoods,
                                                final VariantContext vc,
                                                final int minCount) {
-        if( stratifiedPerReadAlleleLikelihoodMap == null || vc == null) {
+        if( likelihoods == null || vc == null) {
             return null;
         }
 

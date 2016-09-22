@@ -15,6 +15,7 @@ import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.MostLikelyAllele;
 import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 import java.util.*;
@@ -47,12 +48,12 @@ public final class DepthPerSampleHC extends GenotypeAnnotation implements Standa
                           final VariantContext vc,
                           final Genotype g,
                           final GenotypeBuilder gb,
-                          final PerReadAlleleLikelihoodMap alleleLikelihoodMap ) {
+                          final ReadLikelihoods<Allele> likelihoods ) {
         Utils.nonNull(vc);
         Utils.nonNull(g);
         Utils.nonNull(gb);
 
-        if ( alleleLikelihoodMap == null || !g.isCalled() ) {
+        if ( likelihoods == null || !g.isCalled() ) {
             logger.warn("Annotation will not be calculated, genotype is not called or alleleLikelihoodMap is null");
             return;
         }
@@ -63,16 +64,16 @@ public final class DepthPerSampleHC extends GenotypeAnnotation implements Standa
         int dp = 0;
 
         // there are reads
-        if ( !alleleLikelihoodMap.isEmpty() ) {
+        if ( !likelihoods.isEmpty() ) {
             final Set<Allele> alleles = new LinkedHashSet<>(vc.getAlleles());
 
             // make sure that there's a meaningful relationship between the alleles in the perReadAlleleLikelihoodMap and our VariantContext
-            if ( !alleleLikelihoodMap.getAllelesSet().containsAll(alleles) ) {
+            if ( !likelihoods.getAllelesSet().containsAll(alleles) ) {
                 logger.warn("VC alleles " + alleles + " not a strict subset of per read allele map alleles " + alleleLikelihoodMap.getAllelesSet());
                 return;
             }
 
-            for ( Map.Entry<GATKRead, Map<Allele, Double>> el : alleleLikelihoodMap.getLikelihoodReadMap().entrySet() ) {
+            for ( Map.Entry<GATKRead, Map<Allele, Double>> el : likelihoods.getLikelihoodReadMap().entrySet() ) {
                 final MostLikelyAllele a = PerReadAlleleLikelihoodMap.getMostLikelyAllele(el.getValue(), alleles);
                 if ( a.isInformative() ) {
                     dp++;

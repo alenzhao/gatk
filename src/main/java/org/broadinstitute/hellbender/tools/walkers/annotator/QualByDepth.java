@@ -1,6 +1,7 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
 import com.google.common.annotations.VisibleForTesting;
+import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.GenotypesContext;
 import htsjdk.variant.variantcontext.VariantContext;
@@ -9,6 +10,7 @@ import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 
@@ -49,9 +51,10 @@ public final class QualByDepth extends InfoFieldAnnotation implements StandardAn
     static final double IDEAL_HIGH_QD = 30;
     private static final double JITTER_SIGMA = 3;
 
+    @Override
     public Map<String, Object> annotate(final ReferenceContext ref,
                                         final VariantContext vc,
-                                        final Map<String, PerReadAlleleLikelihoodMap> perReadAlleleLikelihoodMap) {
+                                        final ReadLikelihoods<Allele> likelihoods) {
         Utils.nonNull(vc);
         if ( !vc.hasLog10PError() ) {
             return Collections.emptyMap();
@@ -79,7 +82,7 @@ public final class QualByDepth extends InfoFieldAnnotation implements StandardAn
                     ADrestrictedDepth += totalADdepth;
                 }
                 depth += totalADdepth;
-            } else if (perReadAlleleLikelihoodMap != null) {
+            } else if (likelihoods != null) {
                 final PerReadAlleleLikelihoodMap perReadAlleleLikelihoods = perReadAlleleLikelihoodMap.get(genotype.getSampleName());
                 if (perReadAlleleLikelihoods != null && !perReadAlleleLikelihoods.isEmpty()) {
                     depth += perReadAlleleLikelihoods.size();

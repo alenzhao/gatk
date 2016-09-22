@@ -11,6 +11,7 @@ import org.broadinstitute.hellbender.utils.QualityUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.MostLikelyAllele;
 import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
@@ -45,13 +46,13 @@ public final class BaseQualitySumPerAlleleBySample extends GenotypeAnnotation im
 
     @Override
     public void annotate(final ReferenceContext ref,
-                                  final VariantContext vc,
-                                  final Genotype g,
-                                  final GenotypeBuilder gb,
-                                  final PerReadAlleleLikelihoodMap alleleLikelihoodMap) {
+                         final VariantContext vc,
+                         final Genotype g,
+                         final GenotypeBuilder gb,
+                         final ReadLikelihoods<Allele> likelihoods) {
         Utils.nonNull(gb, "gb is null");
         Utils.nonNull(vc, "vc is null");
-        if ( g == null || !g.isCalled() || alleleLikelihoodMap == null ) {
+        if ( g == null || !g.isCalled() || likelihoods == null ) {
             return;
         }
 

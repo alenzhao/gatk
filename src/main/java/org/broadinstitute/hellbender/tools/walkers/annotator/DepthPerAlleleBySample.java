@@ -10,6 +10,7 @@ import htsjdk.variant.vcf.VCFStandardHeaderLines;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 
 import java.util.*;
 
@@ -39,25 +40,25 @@ public final class DepthPerAlleleBySample extends GenotypeAnnotation implements 
                          final VariantContext vc,
                          final Genotype g,
                          final GenotypeBuilder gb,
-                         final PerReadAlleleLikelihoodMap alleleLikelihoodMap) {
+                         final ReadLikelihoods<Allele> likelihoods) {
         Utils.nonNull(gb, "gb is null");
         Utils.nonNull(vc, "vc is null");
 
-        if ( g == null || !g.isCalled() || alleleLikelihoodMap == null || alleleLikelihoodMap.isEmpty()) {
+        if ( g == null || !g.isCalled() || likelihoods == null || likelihoods.isEmpty()) {
             return;
         }
         final Set<Allele> alleles = new LinkedHashSet<>(vc.getAlleles());
 
         // make sure that there's a meaningful relationship between the alleles in the perReadAlleleLikelihoodMap and our VariantContext
-        if ( ! alleleLikelihoodMap.getAllelesSet().containsAll(alleles) ) {
-            throw new IllegalStateException("VC alleles " + alleles + " not a strict subset of per read allele map alleles " + alleleLikelihoodMap.getAllelesSet());
+        if ( ! likelihoods.getAllelesSet().containsAll(alleles) ) {
+            throw new IllegalStateException("VC alleles " + alleles + " not a strict subset of per read allele map alleles " + likelihoods.getAllelesSet());
         }
 
         final Map<Allele, Integer> alleleCounts = new LinkedHashMap<>();
         for ( final Allele allele : vc.getAlleles() ) {
             alleleCounts.put(allele, 0);
         }
-        alleleLikelihoodMap.getLikelihoodReadMap().values().stream()
+        likelihoods.getLikelihoodReadMap().values().stream()
                 .map(m -> PerReadAlleleLikelihoodMap.getMostLikelyAllele(m, alleles))
                 .filter(a -> a.isInformative())
                 .forEach(a -> alleleCounts.compute(a.getMostLikelyAllele(), (allele,prevCount) -> prevCount + 1));
