@@ -1,11 +1,12 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
+import com.google.common.collect.ImmutableMap;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.TextCigarCodec;
 import htsjdk.variant.variantcontext.*;
 import org.broadinstitute.hellbender.tools.walkers.annotator.allelespecific.AS_StrandBiasTest;
 import org.broadinstitute.hellbender.tools.walkers.annotator.allelespecific.AS_StrandOddsRatio;
-import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.*;
 import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
@@ -112,35 +113,40 @@ public final class StrandOddsRatioUnitTest {
         final InfoFieldAnnotation ann = new StrandOddsRatio();
         final String key = GATKVCFConstants.STRAND_ODDS_RATIO_KEY;
 
-        final PerReadAlleleLikelihoodMap map= new PerReadAlleleLikelihoodMap();
-
         final Allele alleleRef = Allele.create("T", true);
         final Allele alleleAlt = Allele.create("A", false);
 
         final int[][] table= {{1, 1},  // alt: one read in each direction,
                               {2, 0}}; //ref: 2 reads fwd, 0 reads back
 
-        final GATKRead read1 = makeRead(true, "read1");
-        final GATKRead read2 = makeRead(true, "read2");
-        final GATKRead read3 = makeRead(false, "read3");
-        final GATKRead read4 = makeRead(true, "read4");
-        map.add(read1, alleleAlt, -1.0);
-        map.add(read1, alleleRef, -100.0);
+        final GATKRead read0 = makeRead(true, "read1");
+        final GATKRead read1 = makeRead(true, "read2");
+        final GATKRead read2 = makeRead(false, "read3");
+        final GATKRead read3 = makeRead(true, "read4");
 
-        map.add(read2, alleleAlt, -1.0);
-        map.add(read2, alleleRef, -100.0);
+        final List<GATKRead> reads = Arrays.asList(read0, read1, read2, read3);
+        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
+        final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1));
+        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(alleleRef, alleleAlt));
+        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
 
-        map.add(read3, alleleAlt, -100.0);
-        map.add(read3, alleleRef, -1.0);
+        // modify likelihoods in-place
+        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
+        matrix.set(0, 0, -100.0);
+        matrix.set(1, 0, -1.0);
 
-        map.add(read4, alleleAlt, -100.0);
-        map.add(read4, alleleRef, -1.0);
+        matrix.set(0, 1, -100.0);
+        matrix.set(1, 1, -1.0);
 
-        final Map<String, PerReadAlleleLikelihoodMap> stratifiedPerReadAlleleLikelihoodMap = Collections.singletonMap(sample1, map);
+        matrix.set(0, 2, -1.0);
+        matrix.set(1, 2, -100.0);
+
+        matrix.set(0, 3, -1.0);
+        matrix.set(1, 3, -100.0);
 
         final VariantContext vc= makeVC(alleleRef, alleleAlt);
 
-        final Map<String, Object> annotatedMap = ann.annotate(null, vc, stratifiedPerReadAlleleLikelihoodMap);
+        final Map<String, Object> annotatedMap = ann.annotate(null, vc, likelihoods);
         final String sor = (String)annotatedMap.get(key);
         final double expectedSOR = StrandOddsRatio.calculateSOR(table);
 
@@ -151,7 +157,6 @@ public final class StrandOddsRatioUnitTest {
     public void testUsingMap_Raw(){
         final AS_StrandBiasTest ann= new AS_StrandOddsRatio();
         final String key = GATKVCFConstants.AS_SB_TABLE_KEY;
-        final PerReadAlleleLikelihoodMap map= new PerReadAlleleLikelihoodMap();
 
         final Allele alleleRef = Allele.create("T", true);
         final Allele alleleAlt = Allele.create("A", false);
@@ -159,28 +164,35 @@ public final class StrandOddsRatioUnitTest {
         final int[][] table= {{1, 1},  // alt: one read in each direction,
                 {2, 0}}; //ref: 2 reads fwd, 0 reads back
 
-        final GATKRead read1 = makeRead(true, "read1");
-        final GATKRead read2 = makeRead(true, "read2");
-        final GATKRead read3 = makeRead(false, "read3");
-        final GATKRead read4 = makeRead(true, "read4");
-        map.add(read1, alleleAlt, -1.0);
-        map.add(read1, alleleRef, -100.0);
+        final GATKRead read0 = makeRead(true, "read1");
+        final GATKRead read1 = makeRead(true, "read2");
+        final GATKRead read2 = makeRead(false, "read3");
+        final GATKRead read3 = makeRead(true, "read4");
 
-        map.add(read2, alleleAlt, -1.0);
-        map.add(read2, alleleRef, -100.0);
+        final List<GATKRead> reads = Arrays.asList(read0, read1, read2, read3);
+        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
+        final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1));
+        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(alleleRef, alleleAlt));
+        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
 
-        map.add(read3, alleleAlt, -100.0);
-        map.add(read3, alleleRef, -1.0);
+        // modify likelihoods in-place
+        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
+        matrix.set(0, 0, -100.0);
+        matrix.set(1, 0, -1.0);
 
-        map.add(read4, alleleAlt, -100.0);
-        map.add(read4, alleleRef, -1.0);
+        matrix.set(0, 1, -100.0);
+        matrix.set(1, 1, -1.0);
 
-        final Map<String, PerReadAlleleLikelihoodMap> stratifiedPerReadAlleleLikelihoodMap = Collections.singletonMap(sample1, map);
+        matrix.set(0, 2, -1.0);
+        matrix.set(1, 2, -100.0);
+
+        matrix.set(0, 3, -1.0);
+        matrix.set(1, 3, -100.0);
 
         final VariantContext vc= makeVC(alleleRef, alleleAlt);
 
-        final Map<String, Object> annotatedMapRaw = ann.annotateRawData(null, vc, stratifiedPerReadAlleleLikelihoodMap);
-        final Map<String, Object> annotatedMapNonRaw = ann.annotateRawData(null, vc, stratifiedPerReadAlleleLikelihoodMap);
+        final Map<String, Object> annotatedMapRaw = ann.annotateRawData(null, vc, likelihoods);
+        final Map<String, Object> annotatedMapNonRaw = ann.annotateRawData(null, vc, likelihoods);
         final String sorStringRaw = (String)annotatedMapRaw.get(key);
         final String sorStringNonRaw = (String)annotatedMapNonRaw.get(key);
 

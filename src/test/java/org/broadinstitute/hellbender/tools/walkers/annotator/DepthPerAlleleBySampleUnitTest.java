@@ -122,7 +122,7 @@ public final class DepthPerAlleleBySampleUnitTest extends BaseTest {
 
         final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
         final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1));
-        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(AC);
+        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(A));
         final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
 
         // modify likelihoods in-place
@@ -134,7 +134,7 @@ public final class DepthPerAlleleBySampleUnitTest extends BaseTest {
             n++;
         }
         for (int i = 0; i < readDepthRef; i++) {
-            matrix.set(1, n, -1.0);
+            matrix.set(0, n, -1.0);
             n++;
         }
 

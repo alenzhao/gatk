@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
+import com.google.common.collect.ImmutableMap;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.TextCigarCodec;
 import htsjdk.variant.variantcontext.*;
@@ -7,7 +8,7 @@ import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.tools.walkers.annotator.allelespecific.AS_RankSumTest;
 import org.broadinstitute.hellbender.tools.walkers.annotator.allelespecific.AS_ReadPosRankSumTest;
 import org.broadinstitute.hellbender.utils.MannWhitneyU;
-import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.*;
 import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.test.BaseTest;
@@ -18,6 +19,7 @@ import org.testng.annotations.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public final class ReadPosRankSumTestUnitTest extends BaseTest {
@@ -60,7 +62,6 @@ public final class ReadPosRankSumTestUnitTest extends BaseTest {
     public void testReadPos(){
         final InfoFieldAnnotation ann = new ReadPosRankSumTest();
         final String key =  GATKVCFConstants.READ_POS_RANK_SUM_KEY;
-        final PerReadAlleleLikelihoodMap map= new PerReadAlleleLikelihoodMap();
 
         final String contig = "1";
 
@@ -69,23 +70,27 @@ public final class ReadPosRankSumTestUnitTest extends BaseTest {
 
         final int[] startAlts = {3, 4};
         final int[] startRefs = {1, 2};
-        final GATKRead read1 = makeRead(contig, startAlts[0],  30);
-        final GATKRead read2 = makeRead(contig, startAlts[1], 30);
-        final GATKRead read3 = makeRead(contig, startRefs[0], 30);
-        final GATKRead read4 = makeRead(contig, startRefs[1], 30);
-        map.add(read1, alleleAlt, -1.0);
-        map.add(read1, alleleRef, -100.0);
+        final GATKRead read0 = makeRead(contig, startAlts[0],  30);
+        final GATKRead read1 = makeRead(contig, startAlts[1], 30);
+        final GATKRead read2 = makeRead(contig, startRefs[0], 30);
+        final GATKRead read3 = makeRead(contig, startRefs[1], 30);
 
-        map.add(read2, alleleAlt, -1.0);
-        map.add(read2, alleleRef, -100.0);
+        final List<GATKRead> reads = Arrays.asList(read0, read1, read2, read3);
+        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
+        final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1));
+        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(alleleRef, alleleAlt));
+        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
 
-        map.add(read3, alleleAlt, -100.0);
-        map.add(read3, alleleRef, -1.0);
-
-        map.add(read4, alleleAlt, -100.0);
-        map.add(read4, alleleRef, -1.0);
-
-        final Map<String, PerReadAlleleLikelihoodMap> stratifiedPerReadAlleleLikelihoodMap = Collections.singletonMap(sample1, map);
+        // modify likelihoods in-place
+        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
+        matrix.set(1, 0, -1.0);
+        matrix.set(0, 0, -100.0);
+        matrix.set(1, 1, -1.0);
+        matrix.set(0, 1, -100.0);
+        matrix.set(1, 2, -100.0);
+        matrix.set(0, 2, -1.0);
+        matrix.set(1, 3, -100.0);
+        matrix.set(0, 3, -1.0);
 
         Assert.assertEquals(ann.getDescriptions().size(), 1);
         Assert.assertEquals(ann.getDescriptions().get(0).getID(), key);
@@ -98,7 +103,7 @@ public final class ReadPosRankSumTestUnitTest extends BaseTest {
         final long position = 5L;  //middle of the read
         final VariantContext vc= makeVC(contig, position, alleleRef, alleleAlt);
 
-        final Map<String, Object> annotate = ann.annotate(ref, vc, stratifiedPerReadAlleleLikelihoodMap);
+        final Map<String, Object> annotate = ann.annotate(ref, vc, likelihoods);
         final double val= MannWhitneyU.runOneSidedTest(false,
                 Arrays.asList(position - startAlts[0], position - startAlts[1]),
                 Arrays.asList(position - startRefs[0], position - startRefs[1])).getLeft();
@@ -110,7 +115,7 @@ public final class ReadPosRankSumTestUnitTest extends BaseTest {
         final VariantContext vcEnd= makeVC(contig, positionEnd, alleleRef, alleleAlt);
 
         //Note: past the middle of the read we compute the position from the end.
-        final Map<String, Object> annotateEnd = ann.annotate(ref, vcEnd, stratifiedPerReadAlleleLikelihoodMap);
+        final Map<String, Object> annotateEnd = ann.annotate(ref, vcEnd, likelihoods);
         final double valEnd= MannWhitneyU.runOneSidedTest(false,
                 Arrays.asList(startAlts[0], startAlts[1]),
                 Arrays.asList(startRefs[0], startRefs[1])).getLeft();
@@ -121,7 +126,7 @@ public final class ReadPosRankSumTestUnitTest extends BaseTest {
         final VariantContext vcPastEnd= makeVC(contig, positionPastEnd, alleleRef, alleleAlt);
 
         //Note: past the end of the read, there's nothing
-        final Map<String, Object> annotatePastEnd = ann.annotate(ref, vcPastEnd, stratifiedPerReadAlleleLikelihoodMap);
+        final Map<String, Object> annotatePastEnd = ann.annotate(ref, vcPastEnd, likelihoods);
         Assert.assertTrue(annotatePastEnd.isEmpty());
     }
 
@@ -131,8 +136,6 @@ public final class ReadPosRankSumTestUnitTest extends BaseTest {
         final String key1 = GATKVCFConstants.AS_RAW_READ_POS_RANK_SUM_KEY;
         final String key2 = GATKVCFConstants.AS_READ_POS_RANK_SUM_KEY;
 
-        final PerReadAlleleLikelihoodMap map= new PerReadAlleleLikelihoodMap();
-
         final String contig = "1";
 
         final Allele alleleRef = Allele.create("T", true);
@@ -141,23 +144,27 @@ public final class ReadPosRankSumTestUnitTest extends BaseTest {
         final int[] startAlts = {3, 4};
         final int[] startRefs = {1, 2};
         final int readLength = 10;
-        final GATKRead read1 = makeRead(contig, startAlts[0], 30, readLength);
-        final GATKRead read2 = makeRead(contig, startAlts[1], 30, readLength);
-        final GATKRead read3 = makeRead(contig, startRefs[0], 30, readLength);
-        final GATKRead read4 = makeRead(contig, startRefs[1], 30, readLength);
-        map.add(read1, alleleAlt, -1.0);
-        map.add(read1, alleleRef, -100.0);
+        final GATKRead read0 = makeRead(contig, startAlts[0], 30, readLength);
+        final GATKRead read1 = makeRead(contig, startAlts[1], 30, readLength);
+        final GATKRead read2 = makeRead(contig, startRefs[0], 30, readLength);
+        final GATKRead read3 = makeRead(contig, startRefs[1], 30, readLength);
 
-        map.add(read2, alleleAlt, -1.0);
-        map.add(read2, alleleRef, -100.0);
+        final List<GATKRead> reads = Arrays.asList(read0, read1, read2, read3);
+        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
+        final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1));
+        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(alleleRef, alleleAlt));
+        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
 
-        map.add(read3, alleleAlt, -100.0);
-        map.add(read3, alleleRef, -1.0);
-
-        map.add(read4, alleleAlt, -100.0);
-        map.add(read4, alleleRef, -1.0);
-
-        final Map<String, PerReadAlleleLikelihoodMap> stratifiedPerReadAlleleLikelihoodMap = Collections.singletonMap(sample1, map);
+        // modify likelihoods in-place
+        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
+        matrix.set(1, 0, -1.0);
+        matrix.set(0, 0, -100.0);
+        matrix.set(1, 1, -1.0);
+        matrix.set(0, 1, -100.0);
+        matrix.set(1, 2, -100.0);
+        matrix.set(0, 2, -1.0);
+        matrix.set(1, 3, -100.0);
+        matrix.set(0, 3, -1.0);
 
         Assert.assertEquals(ann.getDescriptions().size(), 1);
         Assert.assertEquals(ann.getDescriptions().get(0).getID(), key1);
@@ -170,8 +177,8 @@ public final class ReadPosRankSumTestUnitTest extends BaseTest {
         final long position = 5L;  //middle of the read
         final VariantContext vc= makeVC(contig, position, alleleRef, alleleAlt);
 
-        final Map<String, Object> annotateRaw = ann.annotateRawData(ref, vc, stratifiedPerReadAlleleLikelihoodMap);
-        final Map<String, Object> annotateNonRaw = ann.annotate(ref, vc, stratifiedPerReadAlleleLikelihoodMap);
+        final Map<String, Object> annotateRaw = ann.annotateRawData(ref, vc, likelihoods);
+        final Map<String, Object> annotateNonRaw = ann.annotate(ref, vc, likelihoods);
         final String expected = startAlts[0] + ",1," + startAlts[1] + ",1" + AS_RankSumTest.PRINT_DELIM + startRefs[0] + ",1," + startRefs[1] + ",1";
         Assert.assertEquals(annotateRaw.get(key1), expected);
         Assert.assertEquals(annotateNonRaw.get(key1), expected);
@@ -181,8 +188,8 @@ public final class ReadPosRankSumTestUnitTest extends BaseTest {
         final VariantContext vcEnd= makeVC(contig, positionEnd, alleleRef, alleleAlt);
 
         //Note: past the middle of the read we compute the position from the end.
-        final Map<String, Object> annotateEndRaw = ann.annotateRawData(ref, vcEnd, stratifiedPerReadAlleleLikelihoodMap);
-        final Map<String, Object> annotateEndNonRaw = ann.annotate(ref, vcEnd, stratifiedPerReadAlleleLikelihoodMap);
+        final Map<String, Object> annotateEndRaw = ann.annotateRawData(ref, vcEnd, likelihoods);
+        final Map<String, Object> annotateEndNonRaw = ann.annotate(ref, vcEnd, likelihoods);
         final String refS = (startRefs[0]+readLength-positionEnd-1)+ ",1," +(startRefs[1]+readLength-positionEnd-1) + ",1";
         final String altS = (positionEnd-startAlts[1]) + ",1," + (positionEnd-startAlts[0]) + ",1";
         Assert.assertEquals(annotateEndRaw.get(key1), refS + AS_RankSumTest.PRINT_DELIM + altS );
@@ -192,8 +199,8 @@ public final class ReadPosRankSumTestUnitTest extends BaseTest {
         final VariantContext vcPastEnd= makeVC(contig, positionPastEnd, alleleRef, alleleAlt);
 
         //Note: past the end of the read, there's nothing
-        final Map<String, Object> annotatePastEndRaw = ann.annotateRawData(ref, vcPastEnd, stratifiedPerReadAlleleLikelihoodMap);
-        final Map<String, Object> annotatePastEndNonRaw = ann.annotate(ref, vcPastEnd, stratifiedPerReadAlleleLikelihoodMap);
+        final Map<String, Object> annotatePastEndRaw = ann.annotateRawData(ref, vcPastEnd, likelihoods);
+        final Map<String, Object> annotatePastEndNonRaw = ann.annotate(ref, vcPastEnd, likelihoods);
         Assert.assertTrue(annotatePastEndRaw.isEmpty());
         Assert.assertTrue(annotatePastEndNonRaw.isEmpty());
     }

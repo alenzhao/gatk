@@ -38,11 +38,11 @@ public final class Coverage extends InfoFieldAnnotation implements StandardAnnot
                                         final VariantContext vc,
                                         final ReadLikelihoods<Allele> likelihoods) {
         Utils.nonNull(vc);
-        if (likelihoods == null || likelihoods.isEmpty()) {
+        if (likelihoods == null || likelihoods.readCount() == 0) {
             return Collections.emptyMap();
         }
 
-        final int depth = likelihoods.values().stream().mapToInt(maps -> maps.getLikelihoodReadMap().size()).sum();
+        final int depth = likelihoods.readCount();
         return Collections.singletonMap(getKeyNames().get(0), String.format("%d", depth));
     }
 

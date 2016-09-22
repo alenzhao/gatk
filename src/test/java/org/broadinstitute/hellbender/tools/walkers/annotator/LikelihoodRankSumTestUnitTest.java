@@ -1,12 +1,12 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
+import com.google.common.collect.ImmutableMap;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.TextCigarCodec;
 import htsjdk.variant.variantcontext.*;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.MannWhitneyU;
-import org.broadinstitute.hellbender.utils.genotyper.MostLikelyAllele;
-import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.*;
 import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.test.BaseTest;
@@ -16,6 +16,7 @@ import org.testng.annotations.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public final class LikelihoodRankSumTestUnitTest extends BaseTest {
@@ -43,8 +44,6 @@ public final class LikelihoodRankSumTestUnitTest extends BaseTest {
     }
     @Test
     public void testReadPos(){
-        final PerReadAlleleLikelihoodMap map= new PerReadAlleleLikelihoodMap();
-
         final String contig = "1";
 
         final Allele alleleRef = Allele.create("T", true);
@@ -55,23 +54,28 @@ public final class LikelihoodRankSumTestUnitTest extends BaseTest {
 
         final double[] altBadAlleleLL =  {-100.0, -100.0};
         final double[] refBestAlleleLL = {-5.0, -7.0};
-        final GATKRead read1 = makeRead(contig, 1,  30, "read1");
-        final GATKRead read2 = makeRead(contig, 1, 30, "read2");
-        final GATKRead read3 = makeRead(contig, 1, 30, "read3");
-        final GATKRead read4 = makeRead(contig, 1, 30, "read4");
-        map.add(read1, alleleAlt, altBestAlleleLL[0]);
-        map.add(read1, alleleRef, refBadAlleleLL[0]);
+        final GATKRead read0 = makeRead(contig, 1,  30, "read1");
+        final GATKRead read1 = makeRead(contig, 1, 30, "read2");
+        final GATKRead read2 = makeRead(contig, 1, 30, "read3");
+        final GATKRead read3 = makeRead(contig, 1, 30, "read4");
 
-        map.add(read2, alleleAlt, altBestAlleleLL[1]);
-        map.add(read2, alleleRef, refBadAlleleLL[0]);
+        final List<GATKRead> reads = Arrays.asList(read0, read1, read2, read3);
+        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
+        final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1, sample2));
+        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(alleleRef, alleleAlt));
+        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
 
-        map.add(read3, alleleAlt, altBadAlleleLL[0]);
-        map.add(read3, alleleRef, refBestAlleleLL[0]);
+        // modify likelihoods in-place
+        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
+        matrix.set(1, 0, altBestAlleleLL[0]);
+        matrix.set(0, 0, refBadAlleleLL[0]);
+        matrix.set(1, 1, altBestAlleleLL[1]);
+        matrix.set(0, 1, refBadAlleleLL[0]);
+        matrix.set(1, 2, altBadAlleleLL[0]);
+        matrix.set(0, 2, refBestAlleleLL[0]);
+        matrix.set(1, 3, altBadAlleleLL[1]);
+        matrix.set(0, 3, refBestAlleleLL[1]);
 
-        map.add(read4, alleleAlt, altBadAlleleLL[1]);
-        map.add(read4, alleleRef, refBestAlleleLL[1]);
-
-        final Map<String, PerReadAlleleLikelihoodMap> stratifiedPerReadAlleleLikelihoodMap = Collections.singletonMap(sample1, map);
 
         final InfoFieldAnnotation ann = new LikelihoodRankSumTest();
         Assert.assertEquals(ann.getDescriptions().size(), 1);
@@ -84,7 +88,7 @@ public final class LikelihoodRankSumTestUnitTest extends BaseTest {
         final long position = 5L;  //middle of the read
         final VariantContext vc= makeVC(contig, position, alleleRef, alleleAlt);
 
-        final Map<String, Object> annotate = ann.annotate(ref, vc, stratifiedPerReadAlleleLikelihoodMap);
+        final Map<String, Object> annotate = ann.annotate(ref, vc, likelihoods);
         final double val= MannWhitneyU.runOneSidedTest(false,
                 Arrays.asList(altBestAlleleLL[0], altBestAlleleLL[1]),
                 Arrays.asList(refBestAlleleLL[0], refBestAlleleLL[1])).getLeft();
@@ -99,14 +103,6 @@ public final class LikelihoodRankSumTestUnitTest extends BaseTest {
         final String contig = "1";
         final GATKRead read1 = makeRead(contig, 1,  30, "read1");
         ann.getElementForRead(read1, read1.getStart());
-    }
-
-    @Test(expectedExceptions = IllegalStateException.class)
-    public void testBlowupOnCallUninformativeAllele(){
-        final LikelihoodRankSumTest ann = new LikelihoodRankSumTest();
-        final String contig = "1";
-        final GATKRead read1 = makeRead(contig, 1,  30, "read1");
-        ann.getElementForRead(read1, read1.getStart(), new ReadLikelihoods<Allele>.BestAllele());
     }
 
 }

@@ -1,11 +1,12 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
+import com.google.common.collect.ImmutableMap;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.TextCigarCodec;
 import htsjdk.variant.variantcontext.*;
 import org.broadinstitute.hellbender.utils.QualityUtils;
 import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.*;
 import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
@@ -13,9 +14,7 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public final class BaseQualitySumPerAlleleBySampleUnitTest {
     @Test
@@ -40,16 +39,21 @@ public final class BaseQualitySumPerAlleleBySampleUnitTest {
 
     @Test
     public void testUsingReads(){
-        final PerReadAlleleLikelihoodMap map= new PerReadAlleleLikelihoodMap();
+
+
+        final List<GATKRead> reads = new ArrayList<>();
+        final String sample1 = "sample1";
+        final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1));
 
         final Allele A = Allele.create("A", true);
         final Allele C = Allele.create("C");
+        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(A, C));
 
         final List<Allele> AC = Arrays.asList(A, C);
         final int readDepthRef = 20;
         final int readDepthAlt = 17;
 
-        final String sample1 = "sample1";
+
         final int dpDepth = 30; //Note: using a different value on purpose so that we can check that reads are preferred over DP
         final Genotype gAC = new GenotypeBuilder(sample1, AC).DP(dpDepth).make();
 
@@ -61,35 +65,54 @@ public final class BaseQualitySumPerAlleleBySampleUnitTest {
             final GATKRead read = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode(readLen + "M"), "read1_" + i);
             read.setBaseQualities(Utils.dupBytes(baseQual, readLen));
             read.setMappingQuality(20);
-            map.add(read, A, -10.0);
-            map.add(read, C, -1.0);      //try to fool it - add another likelihood to same read
+            reads.add(read);
         }
         for (int i = 0; i < readDepthRef; i++) {
             final GATKRead read = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode(readLen + "M"), "read2_" + i);
             read.setBaseQualities(Utils.dupBytes(baseQual, readLen));
             read.setMappingQuality(20);
-            map.add(read, A, -1.0);
-            map.add(read, C, -100.0);  //try to fool it - add another likelihood to same read
+            reads.add(read);
         }
 
         //throw in one non-informative read
         final GATKRead badRead = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode(readLen + "M"), "read3");
         badRead.setBaseQualities(Utils.dupBytes(baseQual, readLen));
         badRead.setMappingQuality(20);
-        map.add(badRead, A, -1.0);
-        map.add(badRead, C, -1.1); //maybe it's ref, maybe it's alt, too close to call -> not informative
+        reads.add(badRead);
+
+
+        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
+        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
+
+        // modify likelihoods in-place
+        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
+
+        int n = 0;
+        for (int i = 0; i < readDepthAlt; i++) {
+            matrix.set(0, n, -10.0);
+            matrix.set(1, n, -1.0);
+            n++;
+        }
+        for (int i = 0; i < readDepthRef; i++) {
+            matrix.set(0, n, -1.0);
+            matrix.set(1, n, -100.0);
+            n++;
+        }
+
+        matrix.set(0, n, -1.0);
+        matrix.set(1, n, -1.1);
 
         final VariantContext vc = new VariantContextBuilder("test", "20", 10, 10, AC).log10PError(log10PError).genotypes(Arrays.asList(gAC)).make();
 
         final GenotypeBuilder gb = new GenotypeBuilder(gAC);
-        new BaseQualitySumPerAlleleBySample().annotate(null, vc, gAC, gb, map);
+        new BaseQualitySumPerAlleleBySample().annotate(null, vc, gAC, gb, likelihoods);
         final Integer[] quals = (Integer[]) gb.make().getAnyAttribute(GATKVCFConstants.QUALITY_SCORE_SUM_KEY);
         final Integer[] extectedAD = {readDepthRef * baseQual, readDepthAlt * baseQual};
         Assert.assertEquals(quals, extectedAD);
 
         //now test a no-op
         final GenotypeBuilder gb1 = new GenotypeBuilder(gAC);
-        new BaseQualitySumPerAlleleBySample().annotate(null, vc, null, gb1, map);  //null genotype
+        new BaseQualitySumPerAlleleBySample().annotate(null, vc, null, gb1, likelihoods);  //null genotype
         Assert.assertFalse(gb1.make().hasAD());
     }
 }

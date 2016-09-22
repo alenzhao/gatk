@@ -1,11 +1,12 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
+import com.google.common.collect.ImmutableMap;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.TextCigarCodec;
 import htsjdk.variant.variantcontext.*;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.MannWhitneyU;
-import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.*;
 import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
@@ -14,6 +15,7 @@ import org.testng.annotations.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public final class ClippingRankSumTestUnitTest {
@@ -41,37 +43,40 @@ public final class ClippingRankSumTestUnitTest {
     }
     @Test
     public void testClipping(){
-        final PerReadAlleleLikelihoodMap map= new PerReadAlleleLikelihoodMap();
 
         final Allele alleleRef = Allele.create("T", true);
         final Allele alleleAlt = Allele.create("A", false);
 
         final int[] hardAlts = {1, 2};
         final int[] hardRefs = {10, 0};
-        final GATKRead read1 = makeRead(hardAlts[0], 30);
-        final GATKRead read2 = makeRead(hardAlts[1], 30);
-        final GATKRead read3 = makeRead(hardRefs[0], 30);
-        final GATKRead read4 = makeRead(hardRefs[1], 30);
-        map.add(read1, alleleAlt, -1.0);
-        map.add(read1, alleleRef, -100.0);
+        final GATKRead read0 = makeRead(hardAlts[0], 30);
+        final GATKRead read1 = makeRead(hardAlts[1], 30);
+        final GATKRead read2 = makeRead(hardRefs[0], 30);
+        final GATKRead read3 = makeRead(hardRefs[1], 30);
 
-        map.add(read2, alleleAlt, -1.0);
-        map.add(read2, alleleRef, -100.0);
+        final List<GATKRead> reads = Arrays.asList(read0, read1, read2, read3);
+        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
+        final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1));
+        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(alleleRef, alleleAlt));
+        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
 
-        map.add(read3, alleleAlt, -100.0);
-        map.add(read3, alleleRef, -1.0);
+        // modify likelihoods in-place
+        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
+        matrix.set(0, 0 ,-100.0); // alleleRef, read0
+        matrix.set(0, 1, -100.0); // alleleRef, read1
+        matrix.set(0, 2, -1.0); // alleleRef, read2
+        matrix.set(0, 3, -1.0); // alleleRef, read3
 
-        map.add(read4, alleleAlt, -100.0);
-        map.add(read4, alleleRef, -1.0);
-
-        final Map<String, PerReadAlleleLikelihoodMap> stratifiedPerReadAlleleLikelihoodMap = Collections.singletonMap(sample1, map);
-
+        matrix.set(1, 0, -1.0); // alleleAlt, read0
+        matrix.set(1, 1, -1.0); // alleleAlt, read1
+        matrix.set(1, 2, -100.0); // alleleAlt, read2
+        matrix.set(1, 3, -100.0); // alleleAlt, read3
 
         final ReferenceContext ref= null;
         final VariantContext vc= makeVC(alleleRef, alleleAlt);
         final InfoFieldAnnotation ann = new ClippingRankSumTest();
 
-        final Map<String, Object> annotate = ann.annotate(ref, vc, stratifiedPerReadAlleleLikelihoodMap);
+        final Map<String, Object> annotate = ann.annotate(ref, vc, likelihoods);
 
         final double val= MannWhitneyU.runOneSidedTest(false, Arrays.asList(hardAlts[0], hardAlts[1]),
                                                               Arrays.asList(hardRefs[0], hardRefs[1])).getLeft();

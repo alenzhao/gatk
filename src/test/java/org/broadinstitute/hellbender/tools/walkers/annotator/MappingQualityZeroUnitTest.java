@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
+import com.google.common.collect.ImmutableMap;
 import htsjdk.samtools.TextCigarCodec;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.GenotypesContext;
@@ -8,34 +9,30 @@ import htsjdk.variant.variantcontext.VariantContextBuilder;
 import htsjdk.variant.vcf.VCFConstants;
 import org.broadinstitute.hellbender.engine.AlignmentContext;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
-import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.*;
 import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Map;
+import java.util.*;
 
 public final class MappingQualityZeroUnitTest {
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void testAllNull() throws Exception {
-        final Map<String, PerReadAlleleLikelihoodMap> perReadAlleleLikelihoodMap = null;
         final VariantContext vc= null;
         final ReferenceContext referenceContext= null;
         final InfoFieldAnnotation cov = new MappingQualityZero();
-        final Map<String, Object> annotate = cov.annotate(referenceContext, vc, perReadAlleleLikelihoodMap);//vc can't be null
+        final Map<String, Object> annotate = cov.annotate(referenceContext, vc, null);//vc can't be null
     }
 
     @Test
     public void testNullStratifiedPerReadAlleleLikelihoodMap() throws Exception {
-        final Map<String, PerReadAlleleLikelihoodMap> perReadAlleleLikelihoodMap = null;
         final VariantContext vc= makeVC();
         final ReferenceContext referenceContext= null;
         final InfoFieldAnnotation cov = new MappingQualityZero();
-        final Map<String, Object> annotate = cov.annotate(referenceContext, vc, perReadAlleleLikelihoodMap);
+        final Map<String, Object> annotate = cov.annotate(referenceContext, vc, null);
         Assert.assertTrue(annotate.isEmpty());
 
         Assert.assertEquals(cov.getDescriptions().size(), 1);
@@ -53,7 +50,6 @@ public final class MappingQualityZeroUnitTest {
 
     @Test
     public void testPerReadAlleleLikelihoodMap(){
-        final PerReadAlleleLikelihoodMap map= new PerReadAlleleLikelihoodMap();
 
         final Allele alleleT = Allele.create("T");
         final Allele alleleA = Allele.create("A");
@@ -61,39 +57,60 @@ public final class MappingQualityZeroUnitTest {
 
         final int n1A= 3;
         final int n1T= 5;
+        final List<GATKRead> reads = new ArrayList<>();
         for (int i = 0; i < n1A; i++) {
             final GATKRead read = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode("10M"), "n1A_" + i);
             read.setMappingQuality(10);
-            map.add(read, alleleA, lik);
+            reads.add(read);
         }
         for (int i = 0; i < n1T; i++) {
             //try to fool it - add 2 alleles for same read
             final GATKRead read = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode("10M"), "n1T_" + i);
             read.setMappingQuality(0);
-            map.add(read, alleleA, lik);
-            map.add(read, alleleT, lik);
+            reads.add(read);
         }
 
-        final Map<String, PerReadAlleleLikelihoodMap> perReadAlleleLikelihoodMap = Collections.singletonMap("sample1", map);
-        final Map<String, AlignmentContext> stratifiedContexts= null;
+        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of("sample1", reads);
+        final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList("sample1"));
+        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(alleleT, alleleA));
+        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
+
+        // modify likelihoods in-place
+        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
+        int n = 0;
+        for (int i = 0; i < n1A; i++) {
+            matrix.set(1, n, lik);
+            n++;
+        }
+        for (int i = 0; i < n1T; i++) {
+            matrix.set(1, n, lik);
+            matrix.set(0, n, lik);
+
+            n++;
+        }
+
+
         final VariantContext vc = makeVC();
         final ReferenceContext referenceContext= null;
-        final Map<String, Object> annotate = new MappingQualityZero().annotate(referenceContext, vc, perReadAlleleLikelihoodMap);
+        final Map<String, Object> annotate = new MappingQualityZero().annotate(referenceContext, vc, likelihoods);
         Assert.assertEquals(annotate.size(), 1, "size");
         Assert.assertEquals(annotate.keySet(), Collections.singleton(VCFConstants.MAPPING_QUALITY_ZERO_KEY), "annots");
-        final int n= n1T; //only those are MQ0
-        Assert.assertEquals(annotate.get(VCFConstants.MAPPING_QUALITY_ZERO_KEY), String.valueOf(n));
+        Assert.assertEquals(annotate.get(VCFConstants.MAPPING_QUALITY_ZERO_KEY), String.valueOf(n1T));
 
     }
 
 
     @Test
     public void testPerReadAlleleLikelihoodMapEmpty() throws Exception {
-        final Map<String, PerReadAlleleLikelihoodMap> perReadAlleleLikelihoodMap = Collections.emptyMap();
-        final Map<String, AlignmentContext> stratifiedContexts= null;
+        final List<GATKRead> reads = Collections.emptyList();
+        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of("sample1", reads);
+        final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList("sample1"));
+        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(Allele.create("A")));
+        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
+
         final VariantContext vc= makeVC();
         final ReferenceContext referenceContext= null;
-        final Map<String, Object> annotate = new MappingQualityZero().annotate(referenceContext, vc, perReadAlleleLikelihoodMap);
+        final Map<String, Object> annotate = new MappingQualityZero().annotate(referenceContext, vc, likelihoods);
 
         final int n= 0; //strangely,  MappingQualityZero returns 0 if perReadAlleleLikelihoodMap is empty
         Assert.assertEquals(annotate.get(VCFConstants.MAPPING_QUALITY_ZERO_KEY), String.valueOf(n));

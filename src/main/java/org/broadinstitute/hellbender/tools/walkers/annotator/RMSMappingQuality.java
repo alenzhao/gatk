@@ -48,7 +48,7 @@ public final class RMSMappingQuality extends InfoFieldAnnotation implements Stan
                                                final VariantContext vc,
                                                final ReadLikelihoods<Allele> likelihoods){
         Utils.nonNull(vc);
-        if (likelihoods == null ) {
+        if (likelihoods == null || likelihoods.readCount() == 0) {
             return Collections.emptyMap();
         }
 

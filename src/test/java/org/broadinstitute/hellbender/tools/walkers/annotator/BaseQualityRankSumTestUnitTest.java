@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
+import com.google.common.collect.ImmutableMap;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.TextCigarCodec;
 import htsjdk.variant.variantcontext.*;
@@ -8,7 +9,8 @@ import org.broadinstitute.hellbender.tools.walkers.annotator.allelespecific.AS_B
 import org.broadinstitute.hellbender.tools.walkers.annotator.allelespecific.AS_RankSumTest;
 import org.broadinstitute.hellbender.utils.MannWhitneyU;
 import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.hellbender.utils.genotyper.*;
+import org.broadinstitute.hellbender.utils.genotyper.SampleList;
 import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
@@ -17,6 +19,7 @@ import org.testng.annotations.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static org.mockito.Mockito.mock;
@@ -52,36 +55,39 @@ public final class BaseQualityRankSumTestUnitTest {
     public void testBaseQual() {
         final InfoFieldAnnotation ann = new BaseQualityRankSumTest();
         final String key = GATKVCFConstants.BASE_QUAL_RANK_SUM_KEY;
-        final PerReadAlleleLikelihoodMap map = new PerReadAlleleLikelihoodMap();
 
         final Allele alleleRef = Allele.create("T", true);
         final Allele alleleAlt = Allele.create("A", false);
 
         final byte[] hardAlts = {10, 20};
         final byte[] hardRefs = {50, 60};
-        final GATKRead read1 = makeRead(hardAlts[0]);
-        final GATKRead read2 = makeRead(hardAlts[1]);
-        final GATKRead read3 = makeRead(hardRefs[0]);
-        final GATKRead read4 = makeRead(hardRefs[1]);
-        map.add(read1, alleleAlt, -1.0);
-        map.add(read1, alleleRef, -100.0);
+        final GATKRead read0 = makeRead(hardAlts[0]);
+        final GATKRead read1 = makeRead(hardAlts[1]);
+        final GATKRead read2 = makeRead(hardRefs[0]);
+        final GATKRead read3 = makeRead(hardRefs[1]);
 
-        map.add(read2, alleleAlt, -1.0);
-        map.add(read2, alleleRef, -100.0);
+        final List<GATKRead> reads = Arrays.asList(read0, read1, read2, read3);
+        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
+        final SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1));
+        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(alleleRef, alleleAlt));
+        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
 
-        map.add(read3, alleleAlt, -100.0);
-        map.add(read3, alleleRef, -1.0);
+        // modify likelihoods in-place
+        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
+        matrix.set(0, 0 ,-100.0); // alleleRef, read0
+        matrix.set(0, 1, -100.0); // alleleRef, read1
+        matrix.set(0, 2, -1.0); // alleleRef, read2
+        matrix.set(0, 3, -1.0); // alleleRef, read3
 
-        map.add(read4, alleleAlt, -100.0);
-        map.add(read4, alleleRef, -1.0);
-
-        final Map<String, PerReadAlleleLikelihoodMap> stratifiedPerReadAlleleLikelihoodMap = Collections.singletonMap(sample1, map);
-
+        matrix.set(1, 0, -1.0); // alleleAlt, read0
+        matrix.set(1, 1, -1.0); // alleleAlt, read1
+        matrix.set(1, 2, -100.0); // alleleAlt, read2
+        matrix.set(1, 3, -100.0); // alleleAlt, read3
 
         final ReferenceContext ref = null;
         final VariantContext vc = makeVC(alleleRef, alleleAlt);
 
-        final Map<String, Object> annotate = ann.annotate(ref, vc, stratifiedPerReadAlleleLikelihoodMap);
+        final Map<String, Object> annotate = ann.annotate(ref, vc, likelihoods);
 
         final double val = MannWhitneyU.runOneSidedTest(false,
                 Arrays.asList(hardAlts[0], hardAlts[1]),
@@ -100,37 +106,40 @@ public final class BaseQualityRankSumTestUnitTest {
         final AS_RankSumTest ann =  new AS_BaseQualityRankSumTest();
         final String key1 = GATKVCFConstants.AS_RAW_BASE_QUAL_RANK_SUM_KEY;
         final String key2 = GATKVCFConstants.AS_BASE_QUAL_RANK_SUM_KEY;
-        final PerReadAlleleLikelihoodMap map = new PerReadAlleleLikelihoodMap();
 
         final Allele alleleRef = Allele.create("T", true);
         final Allele alleleAlt = Allele.create("A", false);
 
         final byte[] hardAlts = {10, 20};
         final byte[] hardRefs = {50, 60};
-        final GATKRead read1 = makeRead(hardAlts[0]);
-        final GATKRead read2 = makeRead(hardAlts[1]);
-        final GATKRead read3 = makeRead(hardRefs[0]);
-        final GATKRead read4 = makeRead(hardRefs[1]);
-        map.add(read1, alleleAlt, -1.0);
-        map.add(read1, alleleRef, -100.0);
+        final GATKRead read0 = makeRead(hardAlts[0]);
+        final GATKRead read1 = makeRead(hardAlts[1]);
+        final GATKRead read2 = makeRead(hardRefs[0]);
+        final GATKRead read3 = makeRead(hardRefs[1]);
 
-        map.add(read2, alleleAlt, -1.0);
-        map.add(read2, alleleRef, -100.0);
+        final List<GATKRead> reads = Arrays.asList(read0, read1, read2, read3);
+        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
+        final SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1));
+        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(alleleRef, alleleAlt));
+        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
 
-        map.add(read3, alleleAlt, -100.0);
-        map.add(read3, alleleRef, -1.0);
+        // modify likelihoods in-place
+        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
+        matrix.set(0, 0 ,-100.0); // alleleRef, read0
+        matrix.set(0, 1, -100.0); // alleleRef, read1
+        matrix.set(0, 2, -1.0); // alleleRef, read2
+        matrix.set(0, 3, -1.0); // alleleRef, read3
 
-        map.add(read4, alleleAlt, -100.0);
-        map.add(read4, alleleRef, -1.0);
-
-        final Map<String, PerReadAlleleLikelihoodMap> stratifiedPerReadAlleleLikelihoodMap = Collections.singletonMap(sample1, map);
-
+        matrix.set(1, 0, -1.0); // alleleAlt, read0
+        matrix.set(1, 1, -1.0); // alleleAlt, read1
+        matrix.set(1, 2, -100.0); // alleleAlt, read2
+        matrix.set(1, 3, -100.0); // alleleAlt, read3
 
         final ReferenceContext ref = null;
         final VariantContext vc = makeVC(alleleRef, alleleAlt);
 
-        final Map<String, Object> annotateRaw = ann.annotateRawData(ref, vc, stratifiedPerReadAlleleLikelihoodMap);
-        final Map<String, Object> annotateNonRaw = ann.annotate(ref, vc, stratifiedPerReadAlleleLikelihoodMap);
+        final Map<String, Object> annotateRaw = ann.annotateRawData(ref, vc, likelihoods);
+        final Map<String, Object> annotateNonRaw = ann.annotate(ref, vc, likelihoods);
 
         final String expectedAnnotation = hardRefs[0] + ",1," + hardRefs[1] + ",1" + AS_RankSumTest.PRINT_DELIM + hardAlts[0] + ",1," + hardAlts[1] + ",1";
         Assert.assertEquals(annotateRaw.get(key1),    expectedAnnotation);
@@ -145,7 +154,14 @@ public final class BaseQualityRankSumTestUnitTest {
     @Test
     public void testEmptyIfNoGenotypes() throws Exception {
         final BaseQualityRankSumTest ann = new BaseQualityRankSumTest();
-        final Map<String, Object> annotate = ann.annotate(null, when(mock(VariantContext.class).getGenotypesOrderedByName()).thenReturn(Collections.<Genotype>emptyList()).getMock(), Collections.emptyMap());
+
+        final List<GATKRead> reads = Collections.emptyList();
+        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
+        final SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1));
+        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(Allele.NO_CALL));
+        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
+
+        final Map<String, Object> annotate = ann.annotate(null, when(mock(VariantContext.class).getGenotypesOrderedByName()).thenReturn(Collections.<Genotype>emptyList()).getMock(), likelihoods);
         Assert.assertTrue(annotate.isEmpty());
     }
 

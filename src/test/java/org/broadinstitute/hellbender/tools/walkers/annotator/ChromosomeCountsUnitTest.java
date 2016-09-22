@@ -39,11 +39,10 @@ public final class ChromosomeCountsUnitTest {
 
     @Test
     public void testVC() throws Exception {
-        final Map<String, PerReadAlleleLikelihoodMap> perReadAlleleLikelihoodMap = null;
         final VariantContext vc= makeVC();
         final ReferenceContext referenceContext= null;
         final InfoFieldAnnotation ann = new ChromosomeCounts();
-        final Map<String, Object> annotate = ann.annotate(referenceContext, vc, perReadAlleleLikelihoodMap);
+        final Map<String, Object> annotate = ann.annotate(referenceContext, vc, null);
 
         //two hets
         Assert.assertEquals(annotate.get(VCFConstants.ALLELE_NUMBER_KEY), 4);
@@ -57,11 +56,10 @@ public final class ChromosomeCountsUnitTest {
 
     @Test
     public void testEmptyVC() throws Exception {
-        final Map<String, PerReadAlleleLikelihoodMap> perReadAlleleLikelihoodMap = null;
         final VariantContext vc = makeEmptyVC();
         final ReferenceContext referenceContext = null;
         final InfoFieldAnnotation cov = new ChromosomeCounts();
-        final Map<String, Object> annotate = cov.annotate(referenceContext, vc, perReadAlleleLikelihoodMap);
+        final Map<String, Object> annotate = cov.annotate(referenceContext, vc, null);
 
         //no genotypes
         Assert.assertTrue(annotate.isEmpty());
