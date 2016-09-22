@@ -10,7 +10,6 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
 import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
@@ -66,8 +65,6 @@ public final class StrandBiasBySample extends GenotypeAnnotation {
             return;
         }
 
-        //TODO: repalce the singleton map (Map<String, PerReadAlleleLikelihoodMap>) with s single-sample ReadLikelihoods<Allele>
-        //TODO: where the sample name is g.getSampleName() with given likelihoods
         final int[][] table = FisherStrand.getContingencyTable(likelihoods, vc, 0, Arrays.asList(g.getSampleName()));
 
         gb.attribute(GATKVCFConstants.STRAND_BIAS_BY_SAMPLE_KEY, getContingencyArray(table));

@@ -7,15 +7,12 @@ import htsjdk.variant.vcf.VCFInfoHeaderLine;
 import org.apache.log4j.Logger;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.tools.walkers.annotator.StrandBiasTest;
-import org.broadinstitute.hellbender.utils.genotyper.MostLikelyAllele;
-import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
 import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Allele-specific implementation of strand bias annotations

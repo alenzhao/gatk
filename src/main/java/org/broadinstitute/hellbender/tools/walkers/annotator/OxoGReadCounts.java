@@ -8,8 +8,6 @@ import htsjdk.variant.vcf.VCFFormatHeaderLine;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.QualityUtils;
 import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.genotyper.MostLikelyAllele;
-import org.broadinstitute.hellbender.utils.genotyper.PerReadAlleleLikelihoodMap;
 import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
@@ -17,7 +15,6 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 import static org.broadinstitute.hellbender.utils.BaseUtils.Base.A;
 import static org.broadinstitute.hellbender.utils.BaseUtils.Base.C;

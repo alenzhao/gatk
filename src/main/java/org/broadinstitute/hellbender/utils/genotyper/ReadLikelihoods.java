@@ -720,47 +720,6 @@ public final class ReadLikelihoods<A extends Allele> implements SampleList, Alle
         return result;
     }
 
-    /**
-     * Given a collection of likelihood in the old map format, it creates the corresponding read-likelihoods collection.
-     *
-     * @param map the likelihoods to transform.
-     *
-     * @throws IllegalArgumentException if {@code map} is {@code null}.
-     *
-     * @return never {@code null}.
-     */
-    public static ReadLikelihoods<Allele> fromPerAlleleReadLikelihoodsMap(final Map<String,PerReadAlleleLikelihoodMap> map) {
-        Utils.nonNull(map);
-
-        // First we need to create the read-likelihood collection with all required alleles, samples and reads.
-        final SampleList sampleList = new IndexedSampleList(map.keySet());
-        final Set<Allele> alleles = new LinkedHashSet<>(10);
-        final Map<String,List<GATKRead>> sampleToReads = new LinkedHashMap<>(sampleList.numberOfSamples());
-        for (final Map.Entry<String,PerReadAlleleLikelihoodMap> entry : map.entrySet()) {
-            final String sample = entry.getKey();
-            final PerReadAlleleLikelihoodMap sampleLikelihoods = entry.getValue();
-            alleles.addAll(sampleLikelihoods.getAllelesSet());
-            sampleToReads.put(sample,new ArrayList<>(sampleLikelihoods.getLikelihoodReadMap().keySet()));
-        }
-
-        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(alleles);
-        final ReadLikelihoods<Allele> result = new ReadLikelihoods<>(sampleList,alleleList,sampleToReads);
-
-        // Now set the likelihoods.
-        for (final Map.Entry<String,PerReadAlleleLikelihoodMap> sampleEntry : map.entrySet()) {
-            final LikelihoodMatrix<Allele> sampleMatrix = result.sampleMatrix(result.indexOfSample(sampleEntry.getKey()));
-            for (final Map.Entry<GATKRead,Map<Allele,Double>> readEntry : sampleEntry.getValue().getLikelihoodReadMap().entrySet()) {
-                final GATKRead read = readEntry.getKey();
-                final int readIndex = sampleMatrix.indexOfRead(read);
-                for (final Map.Entry<Allele,Double> alleleEntry : readEntry.getValue().entrySet()) {
-                    final int alleleIndex = result.indexOfAllele(alleleEntry.getKey());
-                    sampleMatrix.set(alleleIndex,readIndex,alleleEntry.getValue());
-                }
-            }
-        }
-        return result;
-    }
-
     // calculates an old to new allele index map array.
     private <B extends Allele> int[] oldToNewAlleleIndexMap(final Map<B, List<A>> newToOldAlleleMap, final int oldAlleleCount, final B[] newAlleles) {
         Arrays.stream(newAlleles).forEach(Utils::nonNull);
@@ -1301,40 +1260,6 @@ public final class ReadLikelihoods<A extends Allele> implements SampleList, Alle
             }
         }
         return readIndexBySampleIndex[sampleIndex];
-    }
-
-    /**
-     * Transform into a multi-sample HashMap backed {@link PerReadAlleleLikelihoodMap} type.
-     * @return never {@code null}.
-     *
-     */
-    public Map<String, PerReadAlleleLikelihoodMap> toPerReadAlleleLikelihoodMap() {
-        final int sampleCount = samples.numberOfSamples();
-        final Map<String, PerReadAlleleLikelihoodMap> result = new LinkedHashMap<>(sampleCount);
-        for (int s = 0; s < sampleCount; s++)
-            result.put(samples.getSample(s),toPerReadAlleleLikelihoodMap(s));
-        return result;
-    }
-
-    /**
-     * Transform into a single-sample HashMap backed {@link PerReadAlleleLikelihoodMap} type.
-     *
-     * @return never {@code null}.
-     */
-    public PerReadAlleleLikelihoodMap toPerReadAlleleLikelihoodMap(final int sampleIndex) {
-        Utils.validIndex(sampleIndex, samples.numberOfSamples());
-        final PerReadAlleleLikelihoodMap result = new PerReadAlleleLikelihoodMap();
-        final GATKRead[] sampleReads = readsBySampleIndex[sampleIndex];
-
-        final int alleleCount = alleles.numberOfAlleles();
-        final int sampleReadCount = sampleReads.length;
-        for (int a = 0; a < alleleCount; a++) {
-            final A allele = alleles.getAllele(a);
-            final double[] readLikelihoods = valuesBySampleIndex[sampleIndex][a];
-            for (int r = 0; r < sampleReadCount; r++)
-                result.add(sampleReads[r], allele, readLikelihoods[r]);
-        }
-        return result;
     }
 
     /**
