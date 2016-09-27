@@ -679,6 +679,38 @@ public final class MathUtils {
     }
 
     /**
+     * See #normalizeFromLog but with the additional option to use an approximation that keeps the calculation always in log-space
+     *
+     * @param array
+     * @param takeLog10OfOutput
+     * @param keepInLogSpace
+     *
+     * @return the array passed in, updated in place
+     */
+    public static double[] normalizeFromLog10InPlace(final double[] array, final boolean takeLog10OfOutput, final boolean keepInLogSpace) {
+        // for precision purposes, we need to add (or really subtract, since they're
+        // all negative) the largest value; also, we need to convert to normal-space.
+        double maxValue = arrayMax(array);
+
+        // we may decide to just normalize in log space without converting to linear space
+        if (keepInLogSpace) {
+            return applyToArrayInPlace(array, x -> x - maxValue);
+        }
+
+        // default case: go to linear space
+        if (!takeLog10OfOutput) {
+            final double sum = sum(applyToArrayInPlace(array, x -> Math.pow(10.0, x - maxValue)));
+            return applyToArrayInPlace(array, x -> x/sum);
+        } else {
+            // don't normalize directly in place here, so we can preserve the original input array and update in place at the end
+            final double[] normalized = applyToArray(array, x -> Math.pow(10.0, x - maxValue));
+            final double sum = sum(normalized);
+            final double log10Sum = Math.log10(sum);
+            return applyToArrayInPlace(array, x -> x - maxValue - log10Sum);
+        }
+    }
+
+    /**
      * normalizes the real-space probability array.
      *
      * Does not assume anything about the values in the array, beyond that no elements are below 0.  It's ok

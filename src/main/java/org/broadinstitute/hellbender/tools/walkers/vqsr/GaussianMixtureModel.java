@@ -26,12 +26,12 @@ class GaussianMixtureModel {
     public boolean isModelReadyForEvaluation;
     public boolean failedToConverge = false;
 
-    public GaussianMixtureModel( final int numGaussians, final int numAnnotations,
+    public GaussianMixtureModel( final int numGaussians, final int numVariantData, final int numAnnotations,
                                  final double shrinkage, final double dirichletParameter, final double priorCounts ) {
 
         gaussians = new ArrayList<>( numGaussians );
         for( int iii = 0; iii < numGaussians; iii++ ) {
-            final MultivariateGaussian gaussian = new MultivariateGaussian( numAnnotations );
+            final MultivariateGaussian gaussian = new MultivariateGaussian( numVariantData, numAnnotations );
             gaussians.add( gaussian );
         }
         this.shrinkage = shrinkage;
@@ -126,17 +126,16 @@ class GaussianMixtureModel {
             gaussian.precomputeDenominatorForVariationalBayes( getSumHyperParameterLambda() );
         }
 
+        final double[] pVarInGaussianLog10 = new double[gaussians.size()];
         for( final VariantDatum datum : data ) {
-            final double[] pVarInGaussianLog10 = new double[gaussians.size()];
             int gaussianIndex = 0;
             for( final MultivariateGaussian gaussian : gaussians ) {
-                final double pVarLog10 = gaussian.evaluateDatumLog10( datum );
-                pVarInGaussianLog10[gaussianIndex++] = pVarLog10;
+                pVarInGaussianLog10[gaussianIndex++] = gaussian.evaluateDatumLog10( datum );
             }
-            final double[] pVarInGaussianNormalized = MathUtils.normalizeFromLog10( pVarInGaussianLog10, false );
+            MathUtils.normalizeFromLog10InPlace( pVarInGaussianLog10, false, false);
             gaussianIndex = 0;
             for( final MultivariateGaussian gaussian : gaussians ) {
-                gaussian.assignPVarInGaussian( pVarInGaussianNormalized[gaussianIndex++] );
+                gaussian.assignPVarInGaussian( pVarInGaussianLog10[gaussianIndex++] );
             }
         }
     }

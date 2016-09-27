@@ -337,6 +337,26 @@ public final class MathUtilsUnitTest extends BaseTest {
     }
 
     @Test
+    public void testNormalizeInPlace(){
+        final double error = 1e-6;
+
+        final double[] normalized = new double[]{log10(3.0), log10(2.0), log10(1.0)};
+        MathUtils.normalizeFromLog10InPlace(normalized, false, false);
+        final double[] normalizedLog10 = new double[]{log10(3.0), log10(2.0), log10(1.0)};
+        MathUtils.normalizeFromLog10InPlace(normalizedLog10, true, false);
+        final double[] normalizedLogInLog10 = new double[]{3.0, 2.0, 1.0};
+        MathUtils.normalizeFromLog10InPlace(normalizedLogInLog10, true, true);
+
+        final double[] normalizedExpected    = {3.0/6.0, 2.0/6.0, 1.0/6.0};  //sum of those is 1
+        final double[] normalizedLog10Expected = {log10(3.0 / 6.0), log10(2.0 / 6.0), log10(1.0 / 6.0)}; //sum of 10^ of those is 1
+        final double[] normalizedLogInLogExpected = {0.0, -1.0, -2.0};
+
+        assertEqualsDoubleArray(normalizedExpected, normalized, error);
+        assertEqualsDoubleArray(normalizedLog10Expected, normalizedLog10, error);
+        assertEqualsDoubleArray(normalizedLogInLogExpected, normalizedLogInLog10, error);
+    }
+
+    @Test
     public void testLog10Factorial() {
         // results from Wolfram Alpha
         Assert.assertEquals(log10Factorial(4), 1.3802112, 1e-6);
