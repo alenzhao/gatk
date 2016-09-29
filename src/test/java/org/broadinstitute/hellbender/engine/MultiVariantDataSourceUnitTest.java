@@ -78,7 +78,7 @@ public final class MultiVariantDataSourceUnitTest extends BaseTest {
     }
 
     @Test(expectedExceptions = UserException.IncompatibleSequenceDictionaries.class)
-    public void testMismatchedHeaders() {
+    public void testGetSequenceDictionaryIncompatible() {
         MultiVariantDataSource multiVariantSource = new MultiVariantDataSource();
         multiVariantSource.addFeatureDataSource(baseVariants, "baseVariants");
         multiVariantSource.addFeatureDataSource(baseVariantsConflictingDictionary, "baseVariantsConflictingDictionary");

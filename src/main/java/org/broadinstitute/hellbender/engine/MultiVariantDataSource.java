@@ -1,6 +1,7 @@
 package org.broadinstitute.hellbender.engine;
 
 import htsjdk.samtools.SAMSequenceDictionary;
+import htsjdk.samtools.SAMSequenceRecord;
 import htsjdk.samtools.util.CloseableIterator;
 import htsjdk.samtools.util.MergingIterator;
 import htsjdk.tribble.*;
@@ -10,6 +11,7 @@ import htsjdk.variant.vcf.VCFHeader;
 import htsjdk.variant.vcf.VCFUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.SequenceDictionaryUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
@@ -142,7 +144,7 @@ public final class MultiVariantDataSource implements GATKDataSource<VariantConte
     public SAMSequenceDictionary getSequenceDictionary() {
         validateFeatureSources();
         if (mergedDictionary == null && null != getHeader()) {
-            validateSequenceDictionaries();
+            validateAllSequenceDictionaries();
             final VCFHeader header = getHeader();
             mergedDictionary = header.getSequenceDictionary();
             if (mergedDictionary == null || mergedDictionary.isEmpty()) {
@@ -262,7 +264,7 @@ public final class MultiVariantDataSource implements GATKDataSource<VariantConte
                     .collect(Collectors.toList());
 
             // Now merge the headers using htsjdk, which is pretty promiscuous, and which only works properly
-            // because of the cross-dictionary validation done in validateSequenceDictionaries.
+            // because of the cross-dictionary validation done in validateAllSequenceDictionaries.
             mergedHeader = headers.size() > 1 ?
                     new VCFHeader(VCFUtils.smartMergeHeaders(headers, true)) :
                     headers.get(0);
@@ -281,26 +283,74 @@ public final class MultiVariantDataSource implements GATKDataSource<VariantConte
     }
 
     /**
-     * Pairwise validate the sequence dictionary from each source with the sequence dictionary from each other source,
-     * since its possible for any given pair to have conflicts that are unique to that pair. GATKTool only validates
-     * individual feature dictionaries against the reference dictionary, so we need to cross-validate them against
-     * each other here before we merge them together.
+     * Cross-validate the sequence records from the sequence dictionaries from all data sources, since its possible
+     * for any given pair to have conflicts that are unique to that pair. GATKTool only validates individual feature
+     * dictionaries against the reference dictionary, so we need to cross-validate them against each other here
+     * before we merge them together.
      */
-    private void validateSequenceDictionaries() {
+    private void validateAllSequenceDictionaries() {
+        Map<String, FeatureDataSource<VariantContext>> contigMap = new HashMap<>();
         featureDataSources.forEach(
-                baseFDS -> featureDataSources.stream()
-                    .filter(secondaryFDS -> baseFDS != secondaryFDS)
-                    .forEach(
-                        secondaryFDS -> SequenceDictionaryUtils.validateDictionaries(
-                            baseFDS.getName(),
-                            baseFDS.getSequenceDictionary(),
-                            secondaryFDS.getName(),
-                            secondaryFDS.getSequenceDictionary(),
-                            allowedSequenceDictionaryIncompatibilities,
-                            false,
-                            false)
-                    )
+            ds -> {
+                ds.getSequenceDictionary().getSequences().forEach(
+                    sourceSequence -> {
+                        String sourceName = sourceSequence.getSequenceName();
+                        FeatureDataSource<VariantContext> targetDataSource = contigMap.getOrDefault(sourceName, null);
+                        if (targetDataSource != null) {
+                            SAMSequenceDictionary targetDictionary = targetDataSource.getSequenceDictionary();
+                            SAMSequenceRecord targetSequence = targetDictionary.getSequence(sourceName);
+                            validateSequenceDictionaryRecords(
+                                    ds.getName(),
+                                    ds.getSequenceDictionary(),
+                                    sourceSequence,
+                                    targetDataSource.getName(),
+                                    targetDictionary,
+                                    targetSequence);
+                        } else {
+                            contigMap.put(sourceName, ds);
+                        }
+                    }
+                );
+            }
         );
+    }
+
+    // Cross validate the length and md5 for a pair of sequence records and throw if they're not the same.
+    private void validateSequenceDictionaryRecords(
+            final String sourceDataSourceName,
+            final SAMSequenceDictionary sourceDictionary,
+            final SAMSequenceRecord sourceSequence,
+            final String targetDataSourceName,
+            final SAMSequenceDictionary targetDictionary,
+            final SAMSequenceRecord targetSequence)
+    {
+        if (targetSequence.getSequenceLength() != sourceSequence.getSequenceLength()) {
+            final String msg = String.format("Incompatible sequence lengths found (%s: %d) and (%s: %d)",
+                    sourceSequence.getSequenceName(),
+                    sourceSequence.getSequenceLength(),
+                    targetSequence.getSequenceName(),
+                    targetSequence.getSequenceLength());
+            throw new UserException.IncompatibleSequenceDictionaries(
+                    msg,
+                    sourceDataSourceName,
+                    sourceDictionary,
+                    targetDataSourceName,
+                    targetDictionary
+            );
+        } else if (!Objects.equals(targetSequence.getMd5(), sourceSequence.getMd5())) {
+            final String msg = String.format("Incompatible sequence MD5 values found (%s: %s) and (%s: %s)",
+                    sourceSequence.getSequenceName(),
+                    sourceSequence.getMd5(),
+                    targetSequence.getSequenceName(),
+                    targetSequence.getMd5());
+            throw new UserException.IncompatibleSequenceDictionaries(
+                    msg,
+                    sourceDataSourceName,
+                    sourceDictionary,
+                    targetDataSourceName,
+                    targetDictionary
+            );
+        }
     }
 
     /**
