@@ -341,6 +341,10 @@ public abstract class GATKSparkTool extends SparkCommandLineProgram {
         return intervals;
     }
 
+    public void setIntervals(List<SimpleInterval> intervals) { // TODO: remove setter
+        this.intervals = intervals;
+    }
+
     @Override
     protected void runPipeline( JavaSparkContext sparkContext ) {
         initializeToolInputs(sparkContext);
