@@ -5,10 +5,10 @@ import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.broadinstitute.hellbender.engine.datasources.ReferenceAPISource;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.bqsr.BQSRTestData;
-import org.broadinstitute.hellbender.utils.test.IntegrationTestSpec;
 import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.test.SamAssertionUtils;
 import org.broadinstitute.hellbender.utils.test.ArgumentsBuilder;
+import org.broadinstitute.hellbender.utils.test.IntegrationTestSpec;
+import org.broadinstitute.hellbender.utils.test.SamAssertionUtils;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -90,32 +90,32 @@ public final class BaseRecalibratorSparkIntegrationTest extends CommandLineProgr
                 // See MathUtilsUniTest.testAddDoubles for a demonstration how that can change the results.
                 // See RecalDatum for explanation of why the multiplier is needed.
 
-                // local input/computation/reference, SHUFFLE
-                {new BQSRTest(GRCh37Ref_chr2021, hiSeqBam_1read, dbSNPb37_chr2021, "-indelBQSR -enableBAQ " + "--joinStrategy SHUFFLE", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1READ_RECAL)},
-                {new BQSRTest(GRCh37Ref_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ " +"--joinStrategy SHUFFLE", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_RECAL)},
-                {new BQSRTest(GRCh37Ref_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "--joinStrategy SHUFFLE", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_NOINDEL_NOBAQ_RECAL)},
-                {new BQSRTest(GRCh37Ref_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ " +"--joinStrategy SHUFFLE --indels_context_size 4", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_INDELS_CONTEXT_SIZE_4_RECAL)},
-                {new BQSRTest(GRCh37Ref_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ " +"--joinStrategy SHUFFLE --low_quality_tail 5", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_LOW_QUALITY_TAIL_5_RECAL)},
-                {new BQSRTest(GRCh37Ref_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ " +"--joinStrategy SHUFFLE --quantizing_levels 6", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_QUANTIZING_LEVELS_6_RECAL)},
-                {new BQSRTest(GRCh37Ref_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ " +"--joinStrategy SHUFFLE --mismatches_context_size 4", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_MISMATCHES_CONTEXT_SIZE_4_RECAL)},
+                // local input/computation/reference
+                {new BQSRTest(GRCh37Ref_chr2021, hiSeqBam_1read, dbSNPb37_chr2021, "-indelBQSR -enableBAQ", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1READ_RECAL)},
+                {new BQSRTest(GRCh37Ref_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_RECAL)},
+                {new BQSRTest(GRCh37Ref_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_NOINDEL_NOBAQ_RECAL)},
+                {new BQSRTest(GRCh37Ref_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ --indels_context_size 4", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_INDELS_CONTEXT_SIZE_4_RECAL)},
+                {new BQSRTest(GRCh37Ref_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ --low_quality_tail 5", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_LOW_QUALITY_TAIL_5_RECAL)},
+                {new BQSRTest(GRCh37Ref_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ --quantizing_levels 6", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_QUANTIZING_LEVELS_6_RECAL)},
+                {new BQSRTest(GRCh37Ref_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ --mismatches_context_size 4", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_MISMATCHES_CONTEXT_SIZE_4_RECAL)},
                 // multiple known sites; output generated with GATK4 walker
-                {new BQSRTest(GRCh37Ref_chr2021 , hiSeqBam_20_21_100000, more20Sites, "-indelBQSR -enableBAQ " +" --joinStrategy SHUFFLE -knownSites " + more21Sites, getResourceDir() + "expected.CEUTrio.HiSeq.WGS.b37.ch20.ch21.10m-10m100.recal.txt")},
-                {new BQSRTest(GRCh37Ref_chr2021 , hiSeqCram_20_21_100000, more20Sites, "-indelBQSR -enableBAQ " +" --joinStrategy SHUFFLE -knownSites " + more21Sites, getResourceDir() + "expected.CEUTrio.HiSeq.WGS.b37.ch20.ch21.10m-10m100.recal.txt")},
-                // multiple known sites  with SHUFFLE; entire test case shared with walker version
-                {new BQSRTest(hg19Chr171Mb, HiSeqBam_chr17, dbSNPb37_chr17, "-indelBQSR -enableBAQ " +" --joinStrategy SHUFFLE -knownSites " + more17Sites, getResourceDir() + "expected.NA12878.chr17_69k_70k.2inputs.txt")},
+                {new BQSRTest(GRCh37Ref_chr2021 , hiSeqBam_20_21_100000, more20Sites, "-indelBQSR -enableBAQ -knownSites " + more21Sites, getResourceDir() + "expected.CEUTrio.HiSeq.WGS.b37.ch20.ch21.10m-10m100.recal.txt")},
+                {new BQSRTest(GRCh37Ref_chr2021 , hiSeqCram_20_21_100000, more20Sites, "-indelBQSR -enableBAQ -knownSites " + more21Sites, getResourceDir() + "expected.CEUTrio.HiSeq.WGS.b37.ch20.ch21.10m-10m100.recal.txt")},
+                // multiple known sites ; entire test case shared with walker version
+                {new BQSRTest(hg19Chr171Mb, HiSeqBam_chr17, dbSNPb37_chr17, "-indelBQSR -enableBAQ -knownSites " + more17Sites, getResourceDir() + "expected.NA12878.chr17_69k_70k.2inputs.txt")},
 
-                // multiple known sites  with BROADCAST; entire test case shared with walker version
-                {new BQSRTest(hg19Chr171Mb_2bit, HiSeqBam_chr17, dbSNPb37_chr17, "-indelBQSR -enableBAQ " +" --joinStrategy BROADCAST -knownSites " + more17Sites, getResourceDir() + "expected.NA12878.chr17_69k_70k.2inputs.txt")},
+                // multiple known sites; entire test case shared with walker version
+                {new BQSRTest(hg19Chr171Mb_2bit, HiSeqBam_chr17, dbSNPb37_chr17, "-indelBQSR -enableBAQ -knownSites " + more17Sites, getResourceDir() + "expected.NA12878.chr17_69k_70k.2inputs.txt")},
 
-                // local input/computation, 2Bit Reference, BROADCAST
-                {new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqBam_1read, dbSNPb37_chr2021, "-indelBQSR -enableBAQ " +"--joinStrategy BROADCAST", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1READ_RECAL)},
-                {new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ " +"--joinStrategy BROADCAST", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_RECAL)},
-                {new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "--joinStrategy BROADCAST", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_NOINDEL_NOBAQ_RECAL)},
-                {new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ " +"--joinStrategy BROADCAST --indels_context_size 4", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_INDELS_CONTEXT_SIZE_4_RECAL)},
-                {new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ " +"--joinStrategy BROADCAST --low_quality_tail 5", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_LOW_QUALITY_TAIL_5_RECAL)},
-                {new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ " +"--joinStrategy BROADCAST --quantizing_levels 6", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_QUANTIZING_LEVELS_6_RECAL)},
-                {new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ " +"--joinStrategy BROADCAST --mismatches_context_size 4", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_MISMATCHES_CONTEXT_SIZE_4_RECAL)},
-                // multiple known sites with 2bit BROADCAST; same output used for multiple known sites SHUFFLE test above
+                // local input/computation, 2Bit Reference
+                {new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqBam_1read, dbSNPb37_chr2021, "-indelBQSR -enableBAQ", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1READ_RECAL)},
+                {new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_RECAL)},
+                {new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_NOINDEL_NOBAQ_RECAL)},
+                {new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ --indels_context_size 4", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_INDELS_CONTEXT_SIZE_4_RECAL)},
+                {new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ --low_quality_tail 5", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_LOW_QUALITY_TAIL_5_RECAL)},
+                {new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ --quantizing_levels 6", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_QUANTIZING_LEVELS_6_RECAL)},
+                {new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ --mismatches_context_size 4", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_MISMATCHES_CONTEXT_SIZE_4_RECAL)},
+                // multiple known sites with 2bit; same output used for multiple known sites SHUFFLE test above
                 {new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqBam_20_21_100000, more20Sites, "-indelBQSR -enableBAQ " +" -knownSites " + more21Sites, getResourceDir() + "expected.CEUTrio.HiSeq.WGS.b37.ch20.ch21.10m-10m100.recal.txt")},
                 // Can't use 2 bit reference with a CRAM file: https://github.com/broadinstitute/gatk/issues/1443
                 //{new BQSRTest(GRCh37Ref2bit_chr2021, hiSeqCram_20_21_100000, more20Sites, " -knownSites " + more21Sites, getResourceDir() + "expected.CEUTrio.HiSeq.WGS.b37.ch20.ch21.1m-1m100.recal.txt")},
@@ -178,22 +178,6 @@ public final class BaseRecalibratorSparkIntegrationTest extends CommandLineProgr
                 ab.getString(),
                 Arrays.asList(params.expectedFileName));
         spec.executeTest("testBQSRSparkCloud-" + params.args, this);
-    }
-
-    @Test(groups = "spark")
-    public void testBlowUpOnBroadcastIncompatibleReference() throws IOException {
-        //this should blow up because broadcast requires a 2bit reference
-        final String hiSeqBam_chr20 = getResourceDir() + WGS_B37_CH20_1M_1M1K_BAM;
-        final String dbSNPb37_chr20 = getResourceDir() + DBSNP_138_B37_CH20_1M_1M1K_VCF;
-
-        BQSRTest params = new BQSRTest(b37_reference_20_21, hiSeqBam_chr20, dbSNPb37_chr20, "-indelBQSR -enableBAQ " +"--joinStrategy BROADCAST", getResourceDir() + BQSRTestData.EXPECTED_WGS_B37_CH20_1M_1M1K_RECAL);
-
-        ArgumentsBuilder ab = new ArgumentsBuilder().add(params.getCommandLineNoApiKey());
-        IntegrationTestSpec spec = new IntegrationTestSpec(
-                ab.getString(),
-                1,
-                UserException.Require2BitReferenceForBroadcast.class);
-        spec.executeTest("testBQSR-" + params.args, this);
     }
 
     //This data provider is for tests that use BAM files stored in buckets

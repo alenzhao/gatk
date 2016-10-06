@@ -131,6 +131,10 @@ public final class ReferenceContext implements Iterable<Byte> {
         return dataSource != null;
     }
 
+    public ReferenceDataSource getDataSource() {
+        return dataSource;
+    }
+
     /**
      * Get an iterator over the reference bases in this context. Will return an empty iterator if this
      * context has no backing data source and/or interval.
