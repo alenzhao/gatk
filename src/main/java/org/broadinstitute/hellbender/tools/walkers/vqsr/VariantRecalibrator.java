@@ -298,7 +298,14 @@ public class VariantRecalibrator extends MultiVariantWalker {
             shortName = "allPoly",
             doc = "Trust that all the input training sets' unfiltered records contain only polymorphic sites to drastically speed up the computation.",
             optional=true)
-    private Boolean TRUST_ALL_POLYMORPHIC = false;
+    private boolean TRUST_ALL_POLYMORPHIC = false;
+
+    // Temporary argument for validation of GATK4 implementation against GATKs results:
+    @Advanced
+    @Argument(fullName="gatk3Compatibility", shortName="gatk3",
+            doc="Set initial random number generator state for compatibility with GATK3 results.",
+            optional=true)
+    private boolean gatk3Compatibility = false;
 
     /////////////////////////////
     // Private Member Variables
@@ -320,6 +327,14 @@ public class VariantRecalibrator extends MultiVariantWalker {
 
     @Override
     public void onTraversalStart() {
+
+        if (gatk3Compatibility) {
+            // Temporary argument for validation of GATK4 implementation against GATKs results:
+            // Reset the RNG and draw a single int to align the RNG initial state with that used
+            // by GATK3 to allow comparison of results with GATK3
+            Utils.resetRandomGenerator();
+            Utils.getRandomGenerator().nextInt();
+        }
         dataManager = new VariantDataManager( new ArrayList<>(USE_ANNOTATIONS), VRAC );
 
         if (RSCRIPT_FILE != null && !RScriptExecutor.RSCRIPT_EXISTS)

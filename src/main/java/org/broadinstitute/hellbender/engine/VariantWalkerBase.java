@@ -12,7 +12,7 @@ import java.util.Spliterator;
 import java.util.stream.StreamSupport;
 
 /**
- * Base class for variant walkers, which process one variant at a time from one oe more sources of variants,
+ * Base class for variant walkers, which process one variant at a time from one or more sources of variants,
  * with optional contextual information from a reference, sets of reads, and/or supplementary sources of
  * Features.
  *
@@ -62,13 +62,30 @@ public abstract class VariantWalkerBase extends GATKTool {
         return super.getBestAvailableSequenceDictionary();
     }
 
+    /**
+     * Process the feature inputs that represent the primary driving source(s) of variants for this tool, and
+     * perform any necessary header and sequence dictionary validation. Called by the framework during feature
+     * initialization.
+     */
     protected abstract void initializeDrivingVariants();
 
+    /**
+     * Return the VCFHeader to be used for the driving variants for this tool. The value returned will usually
+     * have been prepared in {@link #initializeDrivingVariants}
+     * @return VCFHeader to be used for the driving variants.
+     */
+    public abstract VCFHeader getHeaderForVariants();
+
+    /**
+     * Return the primary sequence dictionary to be used for the driving variants for this tool. The value returned
+     * will usually have been prepared in {@link #initializeDrivingVariants}
+     */
     protected abstract SAMSequenceDictionary getSequenceDictionaryForDrivingVariants();
 
+    /**
+     * Return a spliterator to be used to iterate over the elements of the driving variants.
+     */
     protected abstract Spliterator<VariantContext> getSpliteratorForDrivingVariants();
-
-    public abstract VCFHeader getHeaderForVariants();
 
     /**
      * Implementation of variant-based traversal.

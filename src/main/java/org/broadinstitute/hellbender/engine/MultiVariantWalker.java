@@ -11,8 +11,9 @@ import java.util.List;
 import java.util.Spliterator;
 
 /**
- * A MultiVariantWalker is a tool that processes one variant at a time from multiple sources of variants, with
- * optional contextual information from a reference, sets of reads, and/or supplementary sources of Features.
+ * A MultiVariantWalker is a tool that processes one variant at a time, in position order, from multiple sources of
+ * variants, with optional contextual information from a reference, sets of reads, and/or supplementary sources of
+ * Features.
  *
  * VariantWalker authors must implement the {@link #apply} method to process each variant, and may optionally implement
  * {@link #onTraversalStart}, {@link #onTraversalSuccess} and/or {@link #closeTool}.
@@ -21,20 +22,23 @@ public abstract class MultiVariantWalker extends VariantWalkerBase {
 
     // NOTE: using File rather than FeatureInput<VariantContext> here so that we can keep this driving source
     //       of variants separate from any other potential sources of Features
-    @Argument(fullName = StandardArgumentDefinitions.VARIANT_LONG_NAME, shortName = StandardArgumentDefinitions.VARIANT_SHORT_NAME, doc = "A VCF file containing variants", common = false, optional = false)
+    @Argument(fullName = StandardArgumentDefinitions.VARIANT_LONG_NAME, shortName = StandardArgumentDefinitions.VARIANT_SHORT_NAME,
+                doc = "One or more VCF files containing variants", common = false, optional = false)
     public List<String> drivingVariantFiles = new ArrayList<String>();
 
     // NOTE: keeping the driving source of variants separate from other, supplementary FeatureInputs in our FeatureManager
     // in GATKTool we do add the driving source to the Feature manager but we do need to treat it differently and thus this
     // field.
-    private MultiVariantDataSource drivingVariants = new MultiVariantDataSource();
+    private MultiVariantDataSource drivingVariants;
     private List<FeatureInput<VariantContext>> drivingVariantsFeatureInputs = new ArrayList<>(2);
 
     @Override
     public boolean requiresFeatures() { return true; }
 
+    @Override
     protected SAMSequenceDictionary getSequenceDictionaryForDrivingVariants() { return drivingVariants.getSequenceDictionary(); }
 
+    @Override
     protected Spliterator<VariantContext> getSpliteratorForDrivingVariants() { return drivingVariants.spliterator(); }
 
     /**
@@ -48,27 +52,22 @@ public abstract class MultiVariantWalker extends VariantWalkerBase {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @Override
     protected void initializeDrivingVariants() {
         drivingVariantFiles.stream().forEach(
                 f -> {
-                    FeatureInput<VariantContext> featureInput = new FeatureInput<>(f, "drivingVariantFile");
+                    FeatureInput<VariantContext> featureInput = new FeatureInput<>(f);
                     if (drivingVariantsFeatureInputs.contains(featureInput)) {
-                        //TODO: should we allow duplicates file names? If so we need to change the FeatureInput hash
-                        //so FeatureManager handles them
                         throw new IllegalArgumentException("Feature inputs must be unique: " + featureInput.toString());
                     }
-                    drivingVariants.addFeatureDataSource(featureInput, FEATURE_CACHE_LOOKAHEAD, VariantContext.class);
                     drivingVariantsFeatureInputs.add(featureInput);
-
-                    //This is the data source for the driving source of variants, which uses a cache lookahead of FEATURE_CACHE_LOOKAHEAD
-                    //drivingVariants = new FeatureDataSource<>(drivingVariantsFeatureInput, FEATURE_CACHE_LOOKAHEAD, VariantContext.class);
 
                     //Add the driving datasource to the feature manager too so that it can be queried. Setting lookahead to 0 to avoid caching.
                     //Note: we are disabling lookahead here because of windowed queries that need to "look behind" as well.
                     features.addToFeatureSources(0, featureInput, VariantContext.class);
                 }
         );
+        drivingVariants = new MultiVariantDataSource(drivingVariantsFeatureInputs, FeatureDataSource.DEFAULT_QUERY_LOOKAHEAD_BASES);
 
         //Note: the intervals for the driving variants are set in onStartup
     }
@@ -85,6 +84,7 @@ public abstract class MultiVariantWalker extends VariantWalkerBase {
      *
      * @return VCFHeader for our driving source of variants
      */
+    @Override
     public final VCFHeader getHeaderForVariants() {
         return drivingVariants.getHeader();
     }
@@ -98,6 +98,8 @@ public abstract class MultiVariantWalker extends VariantWalkerBase {
     @Override
     protected final void onShutdown() {
         super.onShutdown();
-        drivingVariants.close();
+        if (drivingVariants != null) {
+            drivingVariants.close();
+        }
     }
 }

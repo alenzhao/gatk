@@ -29,8 +29,10 @@ public abstract class VariantWalker extends VariantWalkerBase {
     private FeatureDataSource<VariantContext> drivingVariants;
     private FeatureInput<VariantContext> drivingVariantsFeatureInput;
 
+    @Override
     protected SAMSequenceDictionary getSequenceDictionaryForDrivingVariants() { return drivingVariants.getSequenceDictionary(); }
 
+    @Override
     protected Spliterator<VariantContext> getSpliteratorForDrivingVariants() { return drivingVariants.spliterator(); }
 
     /**
@@ -44,7 +46,7 @@ public abstract class VariantWalker extends VariantWalkerBase {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @Override
     protected void initializeDrivingVariants() {
         drivingVariantsFeatureInput = new FeatureInput<>(drivingVariantFile, "drivingVariantFile");
 

@@ -95,12 +95,7 @@ public final class SequenceDictionaryUtils {
         final boolean requireSuperset = false;
         final boolean checkContigOrdering = false;
 
-        final Set<SequenceDictionaryCompatibility> allowedInCompatibilityParams =
-                new HashSet<>(Arrays.asList(
-                        SequenceDictionaryCompatibility.COMMON_SUBSET,
-                        SequenceDictionaryCompatibility.SUPERSET));
-
-        validateDictionaries(name1, dict1, name2, dict2, allowedInCompatibilityParams, requireSuperset, checkContigOrdering);
+        validateDictionaries(name1, dict1, name2, dict2, requireSuperset, checkContigOrdering);
     }
 
     /**
@@ -126,8 +121,7 @@ public final class SequenceDictionaryUtils {
         final boolean requireSuperset = true;
         final boolean checkContigOrdering = false;
 
-        validateDictionaries("reference", referenceDictionary, "reads", cramDictionary,
-                Collections.emptySet(), requireSuperset, checkContigOrdering);
+        validateDictionaries("reference", referenceDictionary, "reads", cramDictionary, requireSuperset, checkContigOrdering);
     }
 
 
@@ -142,11 +136,6 @@ public final class SequenceDictionaryUtils {
      * @param dict1 the sequence dictionary dict1
      * @param name2 name associated with dict2
      * @param dict2 the sequence dictionary dict2
-     * @param allowedIncompatibilities set of {@link SequenceDictionaryCompatibility} values that will be accepted as
-     *                                 valid incompatibilities and which will not result in an exception. Valid values are
-     *                                 {@link SequenceDictionaryCompatibility#COMMON_SUBSET},
-     *                                 {@link SequenceDictionaryCompatibility#SUPERSET},
-     *                                 and {@link SequenceDictionaryCompatibility#NO_COMMON_CONTIGS}
      * @param requireSuperset if true, require that dict1 be a superset of dict2, rather than dict1 and dict2 sharing a common subset
      * @param checkContigOrdering if true, require common contigs to be in the same relative order with respect to each other
      *                            and occur at the same absolute indices, and forbid lexicographically-sorted human dictionaries
@@ -155,11 +144,8 @@ public final class SequenceDictionaryUtils {
                                              final SAMSequenceDictionary dict1,
                                              final String name2,
                                              final SAMSequenceDictionary dict2,
-                                             final Set<SequenceDictionaryCompatibility> allowedIncompatibilities,
                                              final boolean requireSuperset,
                                              final boolean checkContigOrdering ) {
-
-        validateAllowedIncompatibilities(allowedIncompatibilities);
 
         final SequenceDictionaryCompatibility type = compareDictionaries(dict1, dict2, checkContigOrdering);
 
@@ -167,20 +153,15 @@ public final class SequenceDictionaryUtils {
             case IDENTICAL:
                 return;
             case COMMON_SUBSET:
-                if ( !allowedIncompatibilities.contains(type) || requireSuperset ) {
+                if ( requireSuperset ) {
                     throw new UserException.IncompatibleSequenceDictionaries(String.format("Dictionary %s is missing contigs found in dictionary %s", name1, name2), name1, dict1, name2, dict2);
                 }
                 return;
             case SUPERSET:
-                if ( !allowedIncompatibilities.contains(type) && !requireSuperset) {
-                    throw new UserException.IncompatibleSequenceDictionaries(String.format("Dictionary %s is a superset of dictionary %s", name1, name2), name1, dict1, name2, dict2);
-                }
                 return;
             case NO_COMMON_CONTIGS:
-                if ( !allowedIncompatibilities.contains(type) ) {
-                    throw new UserException.IncompatibleSequenceDictionaries("No overlapping contigs found", name1, dict1, name2, dict2);
-                }
-                return; // we don't want to check for unequal contigs
+                throw new UserException.IncompatibleSequenceDictionaries("No overlapping contigs found", name1, dict1, name2, dict2);
+
             case UNEQUAL_COMMON_CONTIGS: {
                 List<SAMSequenceRecord> x = findDisequalCommonContigs(getCommonContigsByName(dict1, dict2), dict1, dict2);
                 SAMSequenceRecord elt1 = x.get(0);
@@ -344,7 +325,7 @@ public final class SequenceDictionaryUtils {
      * @return true if first and second have the same names and lengths, otherwise false
      */
     @VisibleForTesting
-    static boolean sequenceRecordsAreEquivalent(final SAMSequenceRecord first, final SAMSequenceRecord second) {
+    public static boolean sequenceRecordsAreEquivalent(final SAMSequenceRecord first, final SAMSequenceRecord second) {
         if ( first == second ) {
             return true;
         }
@@ -510,25 +491,6 @@ public final class SequenceDictionaryUtils {
         s.append("]");
 
         return s.toString();
-    }
-
-    /**
-     * Validate that all of the values in allowedIncompatibilities are in fact incompatibilities that are allowed
-     * by the API.
-     * @param allowedIncompatibilities
-     */
-    private static void validateAllowedIncompatibilities(Set<SequenceDictionaryCompatibility> allowedIncompatibilities) {
-        if (!allowedIncompatibilities.isEmpty()) {
-            final Set<SequenceDictionaryCompatibility> allowedInCompatibilityParams =
-                    new HashSet<>(Arrays.asList(
-                            SequenceDictionaryCompatibility.COMMON_SUBSET,
-                            SequenceDictionaryCompatibility.SUPERSET,
-                            SequenceDictionaryCompatibility.NO_COMMON_CONTIGS));
-            if (!allowedIncompatibilities.stream().allMatch(incompat -> allowedInCompatibilityParams.contains(incompat))) {
-                throw new IllegalArgumentException("Illegal value in allowedIncompatibilities argument");
-            }
-        }
-
     }
 
 }

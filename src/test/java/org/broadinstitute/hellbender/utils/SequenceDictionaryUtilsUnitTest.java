@@ -12,10 +12,7 @@ import org.testng.annotations.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.broadinstitute.hellbender.utils.SequenceDictionaryUtils.*;
 import static org.broadinstitute.hellbender.utils.SequenceDictionaryUtils.SequenceDictionaryCompatibility.*;
@@ -217,21 +214,12 @@ public final class SequenceDictionaryUtilsUnitTest extends BaseTest {
                 SequenceDictionaryUtils.getDictionaryAsString(firstDictionary),
                 SequenceDictionaryUtils.getDictionaryAsString(secondDictionary));
         Exception exceptionThrown = null;
-
-        Set<SequenceDictionaryCompatibility> allowedIncompatibilities = Collections.emptySet();
-        if (!requireSuperset) {
-            allowedIncompatibilities = new HashSet<>(Arrays.asList(
-                    SequenceDictionaryUtils.SequenceDictionaryCompatibility.COMMON_SUBSET,
-                    SequenceDictionaryUtils.SequenceDictionaryCompatibility.SUPERSET)
-            );
-        }
         try {
             SequenceDictionaryUtils.validateDictionaries(
                     "firstDictionary",
                     firstDictionary,
                     "secondDictionary",
                     secondDictionary,
-                    allowedIncompatibilities,
                     requireSuperset,
                     checkContigOrdering);
         }
