@@ -1,12 +1,12 @@
 package org.broadinstitute.hellbender.engine;
 
-import htsjdk.samtools.SAMFormatException;
-import htsjdk.samtools.SamFiles;
-import htsjdk.samtools.SamReaderFactory;
-import htsjdk.samtools.ValidationStringency;
+import htsjdk.samtools.*;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.broadinstitute.hellbender.utils.read.ReadUtils;
+import org.broadinstitute.hellbender.utils.read.SAMFileGATKReadWriter;
+import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.broadinstitute.hellbender.utils.test.BaseTest;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
@@ -446,4 +446,87 @@ public final class ReadsDataSourceUnitTest extends BaseTest {
             }
         }
     }
+
+    @DataProvider(name = "MergedHeaderIntervalQueries")
+    public Object[][] mergedHeaderQueries() {
+        return new Object[][] {
+
+                // Ensure that we can query on intervals that are present in only one of the input files
+                { new SimpleInterval[] {new SimpleInterval("EXTRA_CONTIG_1", 1,10)},
+                         new String[] {"EXTRA_CONTIG_1_READ"}, new int[] {4} },
+                { new SimpleInterval[] {new SimpleInterval("EXTRA_CONTIG_2", 1,10)},
+                         new String[] {"EXTRA_CONTIG_2_READ"}, new int[] {5} },
+
+                // Multiple intervals, each of which only overlaps one source
+                { new SimpleInterval[] {new SimpleInterval("EXTRA_CONTIG_1", 1,10), new SimpleInterval("EXTRA_CONTIG_2", 1,10)},
+                         new String[] {"EXTRA_CONTIG_1_READ", "EXTRA_CONTIG_2_READ"},
+                         new int[] { 4, 5} },
+
+                // Single interval doesn't overlap ANY input
+                { new SimpleInterval[] {new SimpleInterval("TOTALLY_FAKE_CONTIG", 1,10)},
+                         new String[] {}, new int[] {} }
+        };
+    }
+
+    @Test(dataProvider = "MergedHeaderIntervalQueries")
+    public void testMergedHeaderQuery(
+            final SimpleInterval intervals[],
+            final String expectedReadNames[],
+            final int expectedSequenceIndex[]) {
+        // create two files, each with a read referencing a sequence that is not present in the other
+        final File testFile1 = getFileWithAddedContig(FIRST_TEST_BAM, "EXTRA_CONTIG_1", "test1", ".bam");
+        final File testFile2 = getFileWithAddedContig(SECOND_TEST_BAM, "EXTRA_CONTIG_2", "test2", ".bam");
+
+        ReadsDataSource readsSource = new ReadsDataSource(Arrays.asList(testFile1, testFile2));
+
+        SAMFileHeader samHeader = readsSource.getHeader();
+        SAMSequenceDictionary sequenceDictionary = readsSource.getSequenceDictionary();
+
+        // 4 sequences in the original dictionaries, plus 1 added to each of the 2 inputs == 6
+        Assert.assertEquals(sequenceDictionary.getSequences().size(), 6);
+        Assert.assertEquals(samHeader.getSequenceDictionary(), sequenceDictionary);
+
+        readsSource.setTraversalBounds(Arrays.asList(intervals));
+        int count = 0;
+        for (final GATKRead read : readsSource) {
+            Assert.assertEquals(expectedReadNames[count], read.getName());
+            Assert.assertEquals(
+                    read.convertToSAMRecord(samHeader).getReferenceIndex(),
+                    new Integer(expectedSequenceIndex[count])
+            );
+            count++;
+        }
+        Assert.assertEquals(count, expectedReadNames.length);
+    }
+
+    // Copy the reads in the inputFile to the output file, adding an extra contig to the sequence dictionary
+    // and a read referencing that contig
+    private File getFileWithAddedContig(
+            final File inputFile,
+            final String extraContig,
+            final String outputName,
+            final String extension) {
+        final File outputFile = BaseTest.createTempFile(outputName, extension);
+        try (ReadsDataSource readsSource = new ReadsDataSource(inputFile)) {
+            SAMFileHeader header = readsSource.getHeader();
+            SAMSequenceRecord fakeSequenceRec = new SAMSequenceRecord(extraContig, 100);
+            header.addSequence(fakeSequenceRec);
+
+            try (final SAMFileGATKReadWriter gatkReadWriter = new SAMFileGATKReadWriter(ReadUtils.createCommonSAMWriter(
+                    outputFile, null, header, true, true, false))) {
+                for (final GATKRead read : readsSource) {
+                    gatkReadWriter.addRead(read);
+                }
+                // use the contig name in the read name to make it easy to see where this read came from
+                SAMRecord samRec = new SAMRecord(header);
+                samRec.setReadName(extraContig + "_READ");
+                samRec.setReferenceName(extraContig );
+                samRec.setAlignmentStart(5);
+                samRec.setReadBases(new byte[] {'a', 'c', 'g', 't'});
+                gatkReadWriter.addRead(new SAMRecordToGATKReadAdapter(samRec));
+            }
+        }
+        return outputFile;
+    }
+
 }
