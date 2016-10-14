@@ -123,7 +123,7 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
         // we compute posteriors here and don't have the same prior that AFCalculationResult expects.  Therefore, we
         // give it our posterior as its "likelihood" along with a flat dummy prior
         final double[] dummyFlatPrior = {-1e-10, -1e-10};   //TODO: HACK must be negative for AFCalcResult
-        final double[] log10PosteriorOfNoVariantYesVariant = {log10PNoVariant, Math.log10(1 - Math.pow(10, log10PNoVariant))};
+        final double[] log10PosteriorOfNoVariantYesVariant = {log10PNoVariant, MathUtils.log10OneMinusPow10(log10PNoVariant)};
 
         return new AFCalculationResult(integerAltAlleleCounts, alleles, log10PosteriorOfNoVariantYesVariant, dummyFlatPrior, log10PRefByAllele);
     }
