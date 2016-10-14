@@ -128,6 +128,10 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
         return new AFCalculationResult(integerAltAlleleCounts, alleles, log10PosteriorOfNoVariantYesVariant, dummyFlatPrior, log10PRefByAllele);
     }
 
+    // effectiveAlleleCounts[allele a] = SUM_{genotypes g} (posterior_probability(g) * num_copies of a in g), which we denote as SUM [n_g p_g]
+    // for numerical stability we will do this in log space:
+    // count = SUM 10^(log (n_g p_g)) = SUM 10^(log n_g + log p_g)
+    // thanks to the log-sum-exp trick this lets us work with log posteriors alone
     private double[] effectiveAlleleCounts(final VariantContext vc, final double[] log10AlleleFrequencies) {
         final int numAlleles = vc.getNAlleles();
         Utils.validateArg(numAlleles == log10AlleleFrequencies.length, "number of alleles inconsistent");
