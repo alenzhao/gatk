@@ -17,7 +17,7 @@ import java.util.stream.IntStream;
  * Created by davidben on 7/28/16.
  */
 public class AlleleFrequencyCalculatorUnitTest extends BaseTest {
-    private static final double EPS = 1.0e-8;
+    private static final double EPS = 1.0e-3;
     private static final GenotypeLikelihoodCalculators GL_CALCS = new GenotypeLikelihoodCalculators();
 
     private static final Allele A = Allele.create("A", true);
