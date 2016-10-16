@@ -43,11 +43,9 @@ public final class BaseQualityRankSumTestUnitTest {
     }
 
     private GATKRead makeRead(final byte qual) {
-        final int n = 10;
-        Cigar cigar = TextCigarCodec.decode(n + "M");
-        final GATKRead read = ArtificialReadUtils.createArtificialRead(cigar);
+        final GATKRead read = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode("10M"));
         read.setMappingQuality(50);
-        read.setBaseQualities(Utils.dupBytes(qual, n));
+        read.setBaseQualities(Utils.dupBytes(qual, 10));
         return read;
     }
 
@@ -67,22 +65,10 @@ public final class BaseQualityRankSumTestUnitTest {
         final GATKRead read3 = makeRead(hardRefs[1]);
 
         final List<GATKRead> reads = Arrays.asList(read0, read1, read2, read3);
-        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
-        final SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1));
-        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(alleleRef, alleleAlt));
-        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
+        final ReadLikelihoods<Allele> likelihoods =
+                AnnotationArtificialData.initializeReadLikelihoods(sample1, alleleRef, alleleAlt, reads);
 
-        // modify likelihoods in-place
-        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
-        matrix.set(0, 0 ,-100.0); // alleleRef, read0
-        matrix.set(0, 1, -100.0); // alleleRef, read1
-        matrix.set(0, 2, -1.0); // alleleRef, read2
-        matrix.set(0, 3, -1.0); // alleleRef, read3
-
-        matrix.set(1, 0, -1.0); // alleleAlt, read0
-        matrix.set(1, 1, -1.0); // alleleAlt, read1
-        matrix.set(1, 2, -100.0); // alleleAlt, read2
-        matrix.set(1, 3, -100.0); // alleleAlt, read3
+        AnnotationArtificialData.setLikelihoods(likelihoods, 2, 2, 0, -100.0, -100.0, -1.0);
 
         final ReferenceContext ref = null;
         final VariantContext vc = makeVC(alleleRef, alleleAlt);
@@ -118,22 +104,10 @@ public final class BaseQualityRankSumTestUnitTest {
         final GATKRead read3 = makeRead(hardRefs[1]);
 
         final List<GATKRead> reads = Arrays.asList(read0, read1, read2, read3);
-        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
-        final SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1));
-        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(alleleRef, alleleAlt));
-        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
+        final ReadLikelihoods<Allele> likelihoods =
+                AnnotationArtificialData.initializeReadLikelihoods(sample1, alleleRef, alleleAlt, reads);
 
-        // modify likelihoods in-place
-        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
-        matrix.set(0, 0 ,-100.0); // alleleRef, read0
-        matrix.set(0, 1, -100.0); // alleleRef, read1
-        matrix.set(0, 2, -1.0); // alleleRef, read2
-        matrix.set(0, 3, -1.0); // alleleRef, read3
-
-        matrix.set(1, 0, -1.0); // alleleAlt, read0
-        matrix.set(1, 1, -1.0); // alleleAlt, read1
-        matrix.set(1, 2, -100.0); // alleleAlt, read2
-        matrix.set(1, 3, -100.0); // alleleAlt, read3
+        AnnotationArtificialData.setLikelihoods(likelihoods, 2, 2, 0, -100.0, -100.0, -1.0);
 
         final ReferenceContext ref = null;
         final VariantContext vc = makeVC(alleleRef, alleleAlt);

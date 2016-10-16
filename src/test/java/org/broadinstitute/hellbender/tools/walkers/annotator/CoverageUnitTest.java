@@ -76,24 +76,10 @@ public final class CoverageUnitTest extends BaseTest {
             reads.add(read);
         }
 
-        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of("sample1", reads);
-        final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList("sample1"));
-        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(alleleT, alleleA));
-        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
+        final ReadLikelihoods<Allele> likelihoods =
+                AnnotationArtificialData.initializeReadLikelihoods("sample1", alleleT, alleleA, reads);
 
-        // modify likelihoods in-place
-        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
-
-        int n = 0;
-        for (int i = 0; i < n1A; i++) {
-            matrix.set(1, n, lik);
-            n++;
-        }
-        for (int i = 0; i < n1T; i++) {
-            matrix.set(0, n, lik);
-            matrix.set(1, n, lik);
-            n++;
-        }
+        AnnotationArtificialData.setLikelihoods(likelihoods, n1T, n1A, 0, -1.0, 0.0, -1.0);
 
         final VariantContext vc= makeVC();
         final ReferenceContext referenceContext= null;

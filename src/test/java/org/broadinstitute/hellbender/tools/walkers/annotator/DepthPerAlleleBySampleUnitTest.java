@@ -32,7 +32,7 @@ public final class DepthPerAlleleBySampleUnitTest extends BaseTest {
         final int readDepthRef = 20;
         final int readDepthAlt = 17;
         final int[] extectedAD = {readDepthRef, readDepthAlt};
-        
+
         final String sample1 = "sample1";
         final int dpDepth = 30; //Note: using a different value on purpose so that we can check that reads are preferred over DP
         final Genotype gAC = new GenotypeBuilder(sample1, AC).DP(dpDepth).make();
@@ -40,7 +40,7 @@ public final class DepthPerAlleleBySampleUnitTest extends BaseTest {
         final double log10PError = -5;
 
         final ReadLikelihoods<Allele> likelihoods =
-                AnnotationArtificialData.makeLikelihoods(sample1, readDepthRef, readDepthAlt, 1, -100.0, -10.0, -1.1, A, C);
+                AnnotationArtificialData.makeLikelihoods(sample1, readDepthRef, readDepthAlt, 1, -100.0, -10.0, -1.1, A, C, (byte) 20, 20);
 
         final VariantContext vc = new VariantContextBuilder("test", "20", 10, 10, AC).log10PError(log10PError).genotypes(Arrays.asList(gAC)).make();
 
@@ -62,8 +62,6 @@ public final class DepthPerAlleleBySampleUnitTest extends BaseTest {
         final Allele C = Allele.create("C");
 
         final List<Allele> AC = Arrays.asList(A, C);
-        final int readDepthRef = 20;
-        final int readDepthAlt = 17;
 
         final String sample1 = "sample1";
         final int dpDepth = 30; //Note: using a different value on purpose so that we can check that reads are preferred over DP
@@ -71,40 +69,15 @@ public final class DepthPerAlleleBySampleUnitTest extends BaseTest {
 
         final double log10PError = -5;
 
-        final List<GATKRead> reads = new ArrayList<>();
-        for (int i = 0; i < readDepthAlt; i++) {
-            final GATKRead read = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode("10M"));
-            read.setMappingQuality(20);
-            reads.add(read);
-        }
-        for (int i = 0; i < readDepthRef; i++) {
-            final GATKRead read = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode("10M"));
-            read.setMappingQuality(20);
-            reads.add(read);
-        }
-
+        final List<GATKRead> reads = Arrays.asList(ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode("10M")));
         final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
         final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1));
         final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(A));
         final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
-
-        // modify likelihoods in-place
-        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
-
-        int n = 0;
-        for (int i = 0; i < readDepthAlt; i++) {
-            matrix.set(0, n, -10.0);
-            n++;
-        }
-        for (int i = 0; i < readDepthRef; i++) {
-            matrix.set(0, n, -1.0);
-            n++;
-        }
-
         final VariantContext vc = new VariantContextBuilder("test", "20", 10, 10, AC).log10PError(log10PError).genotypes(Arrays.asList(gAC)).make();
 
         final GenotypeBuilder gb = new GenotypeBuilder(gAC);
-        //this blows up because there's no C allele in the map
+        //this blows up because there's no C allele in the likelihoods
         new DepthPerAlleleBySample().annotate(null, vc, gAC, gb, likelihoods);
     }
 

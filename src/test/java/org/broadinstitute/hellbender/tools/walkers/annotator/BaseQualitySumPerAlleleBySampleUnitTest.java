@@ -61,46 +61,8 @@ public final class BaseQualitySumPerAlleleBySampleUnitTest {
         final byte baseQual = 23;
         final int readLen = 10;
 
-        for (int i = 0; i < readDepthAlt; i++) {
-            final GATKRead read = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode(readLen + "M"), "read1_" + i);
-            read.setBaseQualities(Utils.dupBytes(baseQual, readLen));
-            read.setMappingQuality(20);
-            reads.add(read);
-        }
-        for (int i = 0; i < readDepthRef; i++) {
-            final GATKRead read = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode(readLen + "M"), "read2_" + i);
-            read.setBaseQualities(Utils.dupBytes(baseQual, readLen));
-            read.setMappingQuality(20);
-            reads.add(read);
-        }
-
-        //throw in one non-informative read
-        final GATKRead badRead = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode(readLen + "M"), "read3");
-        badRead.setBaseQualities(Utils.dupBytes(baseQual, readLen));
-        badRead.setMappingQuality(20);
-        reads.add(badRead);
-
-
-        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
-        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
-
-        // modify likelihoods in-place
-        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
-
-        int n = 0;
-        for (int i = 0; i < readDepthAlt; i++) {
-            matrix.set(0, n, -10.0);
-            matrix.set(1, n, -1.0);
-            n++;
-        }
-        for (int i = 0; i < readDepthRef; i++) {
-            matrix.set(0, n, -1.0);
-            matrix.set(1, n, -100.0);
-            n++;
-        }
-
-        matrix.set(0, n, -1.0);
-        matrix.set(1, n, -1.1);
+        final ReadLikelihoods<Allele> likelihoods =
+                AnnotationArtificialData.makeLikelihoods(sample1, readDepthRef, readDepthAlt, 1, -100.0, -10.0, -1.1, A, C, baseQual, 20);
 
         final VariantContext vc = new VariantContextBuilder("test", "20", 10, 10, AC).log10PError(log10PError).genotypes(Arrays.asList(gAC)).make();
 
