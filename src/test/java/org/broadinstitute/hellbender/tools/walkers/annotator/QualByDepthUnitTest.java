@@ -88,10 +88,8 @@ public class QualByDepthUnitTest extends BaseTest {
 
     @Test
     public void testUsingReads(){
-
         final Allele A = Allele.create("A", true);
         final Allele C = Allele.create("C");
-        final Allele G = Allele.create("G");
 
         final List<Allele> AC = Arrays.asList(A, C);
         final int readDepth = 20;
@@ -112,7 +110,7 @@ public class QualByDepthUnitTest extends BaseTest {
 
         final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
         final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1));
-        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(A, C, G));
+        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(Arrays.asList(A, C));
         final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
 
         // modify likelihoods in-place
@@ -121,7 +119,6 @@ public class QualByDepthUnitTest extends BaseTest {
         for (int n = 0; n < n1A; n++) {
             matrix.set(0, n, -1.0);
             matrix.set(1, n, -100.0);
-            matrix.set(2, n, -1000.0);
         }
 
         final VariantContext vc = new VariantContextBuilder("test", "20", 10, 10, AC).log10PError(log10PError).genotypes(Arrays.asList(gAC)).make();

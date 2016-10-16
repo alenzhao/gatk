@@ -40,7 +40,7 @@ public final class MappingQualityZero extends InfoFieldAnnotation {
         if (!vc.isVariant() || likelihoods == null){
             return Collections.emptyMap();
         }
-        //NOTE: unlike other annotations, this one returns 0 if stratifiedPerReadAlleleLikelihoodMap is empty
+        //NOTE: unlike other annotations, this one returns 0 if likelihoods are empty
         final long mq0 = IntStream.range(0, likelihoods.numberOfSamples()).boxed()
                 .flatMap(s -> likelihoods.sampleReads(s).stream())
                 .filter(r -> r.getMappingQuality() == 0)

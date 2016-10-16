@@ -299,7 +299,7 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
 
         // if we are subsetting alleles (either because there were too many or because some were not polymorphic)
         // then we may need to trim the alleles (because the original VariantContext may have had to pad at the end).
-        if ( outputAlleles.size() != vc.getAlleles().size() && !limitedContext ) // limitedContext callers need to handle allele trimming on their own to keep their perReadAlleleLikelihoodMap alleles in sync
+        if ( outputAlleles.size() != vc.getAlleles().size() && !limitedContext ) // limitedContext callers need to handle allele trimming on their own to keep their alleles in sync
         {
             vcCall = GATKVariantContextUtils.reverseTrimAlleles(vcCall);
         }

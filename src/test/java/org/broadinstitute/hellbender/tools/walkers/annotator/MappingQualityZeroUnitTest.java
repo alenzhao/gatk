@@ -28,7 +28,7 @@ public final class MappingQualityZeroUnitTest {
     }
 
     @Test
-    public void testNullStratifiedPerReadAlleleLikelihoodMap() throws Exception {
+    public void testNullLikelihoods() throws Exception {
         final VariantContext vc= makeVC();
         final ReferenceContext referenceContext= null;
         final InfoFieldAnnotation cov = new MappingQualityZero();
@@ -49,7 +49,7 @@ public final class MappingQualityZeroUnitTest {
     }
 
     @Test
-    public void testPerReadAlleleLikelihoodMap(){
+    public void testLikelihoods(){
 
         final Allele alleleT = Allele.create("T");
         final Allele alleleA = Allele.create("A");
@@ -89,7 +89,6 @@ public final class MappingQualityZeroUnitTest {
             n++;
         }
 
-
         final VariantContext vc = makeVC();
         final ReferenceContext referenceContext= null;
         final Map<String, Object> annotate = new MappingQualityZero().annotate(referenceContext, vc, likelihoods);
@@ -99,9 +98,8 @@ public final class MappingQualityZeroUnitTest {
 
     }
 
-
     @Test
-    public void testPerReadAlleleLikelihoodMapEmpty() throws Exception {
+    public void testEmptyLikelihoods() throws Exception {
         final List<GATKRead> reads = Collections.emptyList();
         final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of("sample1", reads);
         final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList("sample1"));
@@ -112,7 +110,7 @@ public final class MappingQualityZeroUnitTest {
         final ReferenceContext referenceContext= null;
         final Map<String, Object> annotate = new MappingQualityZero().annotate(referenceContext, vc, likelihoods);
 
-        final int n= 0; //strangely,  MappingQualityZero returns 0 if perReadAlleleLikelihoodMap is empty
+        final int n= 0; //strangely,  MappingQualityZero returns 0 if likelihoods is empty
         Assert.assertEquals(annotate.get(VCFConstants.MAPPING_QUALITY_ZERO_KEY), String.valueOf(n));
     }
 }

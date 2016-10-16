@@ -61,7 +61,7 @@ public final class DepthPerSampleHC extends GenotypeAnnotation implements Standa
 
         final Set<Allele> alleles = new LinkedHashSet<>(vc.getAlleles());
 
-        // make sure that there's a meaningful relationship between the alleles in the perReadAlleleLikelihoodMap and our VariantContext
+        // make sure that there's a meaningful relationship between the alleles in the likelihoods and our VariantContext
         if ( !likelihoods.alleles().containsAll(alleles) ) {
             logger.warn("VC alleles " + alleles + " not a strict subset of per read allele map alleles " + likelihoods.alleles());
             return;

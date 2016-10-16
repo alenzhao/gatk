@@ -65,7 +65,7 @@ public final class RMSMappingQualityUnitTest {
     }
 
     @Test
-    public void testPerReadAlleleLikelihoodMap(){
+    public void testLikelihoods(){
 
         final Allele alleleA = Allele.create("A");
         final double lik= -1.0;  //ignored
@@ -110,7 +110,7 @@ public final class RMSMappingQualityUnitTest {
     }
 
     @Test
-    public void testPerReadAlleleLikelihoodMapEmpty() throws Exception {
+    public void testEmptyLikelihoods() throws Exception {
         final List<GATKRead> reads = Collections.emptyList();
         final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of("sample1", reads);
         final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList("sample1"));
@@ -154,7 +154,7 @@ public final class RMSMappingQualityUnitTest {
     }
 
     @Test
-    public void testPerReadAlleleLikelihoodMap_AS(){
+    public void testLikelihoods_AS(){
 
         final Allele alleleA = Allele.create("A", true);
         final double lik= -1.0;  //ignored

@@ -58,10 +58,7 @@ public final class CoverageUnitTest extends BaseTest {
     }
 
     @Test
-    public void testPerReadAlleleLikelihoodMap(){
-
-
-
+    public void testLikelihoods(){
         final Allele alleleT = Allele.create("T");
         final Allele alleleA = Allele.create("A");
         final double lik= -1.0;
@@ -105,6 +102,5 @@ public final class CoverageUnitTest extends BaseTest {
         Assert.assertEquals(annotate.keySet(), Collections.singleton(VCFConstants.DEPTH_KEY), "annots");
         final int m = n1A + n1T;
         Assert.assertEquals(annotate.get(VCFConstants.DEPTH_KEY), String.valueOf(m));
-
     }
 }

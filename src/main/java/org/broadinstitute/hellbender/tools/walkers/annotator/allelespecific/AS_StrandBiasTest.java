@@ -57,12 +57,12 @@ public abstract class AS_StrandBiasTest extends StrandBiasTest implements Reduci
                                                final VariantContext vc,
                                                final ReadLikelihoods<Allele> likelihoods ) {
 
-        //for allele-specific annotations we only call from HC and we only use perReadAlleleLikelihoodMap
+        //for allele-specific annotations we only call from HC and we only use likelihoods
         if ( likelihoods == null) {
             return Collections.emptyMap();
         }
-        // calculate the annotation from the stratified per read likelihood map
-        // stratifiedPerReadAllelelikelihoodMap can come from HaplotypeCaller call to VariantAnnotatorEngine
+        // calculate the annotation from the likelihoods
+        // likelihoods can come from HaplotypeCaller call to VariantAnnotatorEngine
         final Map<String, Object> annotations = new HashMap<>();
         final ReducibleAnnotationData<List<Integer>> myData = new AlleleSpecificAnnotationData<>(vc.getAlleles(),null);
         calculateRawData(vc, likelihoods, myData);

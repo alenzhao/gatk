@@ -87,7 +87,7 @@ public final class AS_RMSMappingQuality extends InfoFieldAnnotation implements A
         //For the raw data here, we're only keeping track of the sum of the squares of our values
         //When we go to reduce, we'll use the AD info to get the number of reads
 
-        //must use perReadAlleleLikelihoodMap for allele-specific annotations
+        //must use likelihoods for allele-specific annotations
         if (likelihoods == null) {
             return;
         }
