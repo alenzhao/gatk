@@ -32,52 +32,15 @@ public final class DepthPerAlleleBySampleUnitTest extends BaseTest {
         final int readDepthRef = 20;
         final int readDepthAlt = 17;
         final int[] extectedAD = {readDepthRef, readDepthAlt};
-
+        
         final String sample1 = "sample1";
         final int dpDepth = 30; //Note: using a different value on purpose so that we can check that reads are preferred over DP
         final Genotype gAC = new GenotypeBuilder(sample1, AC).DP(dpDepth).make();
 
         final double log10PError = -5;
 
-        final List<GATKRead> reads = new ArrayList<>();
-        for (int i = 0; i < readDepthAlt; i++) {
-            final GATKRead read = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode("10M"), "readDepthAlt_" + i);
-            read.setMappingQuality(20);
-            reads.add(read);
-        }
-        for (int i = 0; i < readDepthRef; i++) {
-            final GATKRead read = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode("10M"), "readDepthRef_" + i);
-            read.setMappingQuality(20);
-            reads.add(read);
-        }
-
-        //throw in one non-informative read
-        final GATKRead badRead = ArtificialReadUtils.createArtificialRead(TextCigarCodec.decode("10M"), "non-informative");
-        badRead.setMappingQuality(20);
-        reads.add(badRead);
-
-        final Map<String, List<GATKRead>> readsBySample = ImmutableMap.of(sample1, reads);
-        final org.broadinstitute.hellbender.utils.genotyper.SampleList sampleList = new IndexedSampleList(Arrays.asList(sample1));
-        final AlleleList<Allele> alleleList = new IndexedAlleleList<>(AC);
-        final ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>(sampleList, alleleList, readsBySample);
-
-        // modify likelihoods in-place
-        final LikelihoodMatrix<Allele> matrix = likelihoods.sampleMatrix(0);
-
-        int n = 0;
-        for (int i = 0; i < readDepthAlt; i++) {
-            matrix.set(0, n, -10.0);
-            matrix.set(1, n, -1.0);
-            n++;
-        }
-        for (int i = 0; i < readDepthRef; i++) {
-            matrix.set(0, n, -1.0);
-            matrix.set(1, n, -100.0);
-            n++;
-        }
-
-        matrix.set(0, n, -1.0);
-        matrix.set(1, n, -1.1);
+        final ReadLikelihoods<Allele> likelihoods =
+                AnnotationArtificialData.makeLikelihoods(sample1, readDepthRef, readDepthAlt, 1, -100.0, -10.0, -1.1, A, C);
 
         final VariantContext vc = new VariantContextBuilder("test", "20", 10, 10, AC).log10PError(log10PError).genotypes(Arrays.asList(gAC)).make();
 
